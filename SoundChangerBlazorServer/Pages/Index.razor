@@ -1,0 +1,349 @@
+﻿@page "/"
+@page "/home"
+
+@using MediaToolkit.Model;
+@using MediaToolkit;
+@using Microsoft.AspNetCore.WebUtilities;
+@using NAudio.Wave;
+@using NAudio.Wave.SampleProviders;
+@using SoundChangerBlazorServer.Data;
+@using SoundChangerBlazorServer.Models;
+@using SoundChangerBlazorServer.Models.SpotifyModels;
+@using SoundTouch.Net.NAudioSupport;
+@using IgniteUI.Blazor.Controls;
+@using VideoLibrary;
+@using Syncfusion.Blazor.Spinner;
+@inject IJSRuntime JSRuntime;
+@inject AudioService AudioService;
+@inject SpotifyClient SpotifyClient;
+@inject NavigationManager NavigationManager
+@inject YoutubeDownloader YoutubeDownloader;
+
+<PageTitle>Index</PageTitle>
+
+<div class="container">
+    <div class="main-content">
+        <div class="top-section">
+            <label class="file-input">
+                <InputFile class="file-input" OnChange="@FileInput" />
+                File input
+            </label>
+            <br />
+            <div>OR</div>
+            <br />
+            <div>
+                Link from youtube
+            </div>
+            <input placeholder="Enter your URL"
+            @bind-value="@YoutubeLink"
+            @bind-value:event="oninput" type="text" />
+            <button @onclick="LoadFromYoutube" class="btn btn-primary">Load</button>
+            @if (!SpotifyClient.IsAuthorized)
+            {
+                <div id="SpotifyAut">
+                    <br />
+                    <button @onclick="SpotifyConnect" class="btn btn-primary-green">Authorize Spotify</button>
+                </div>
+            }
+
+            <div id="spotifyPartial" style="display:none;">
+                <br />
+                <div>Search in spotify</div>
+                <input placeholder="Enter title"
+                @bind-value="@SpotifySearch"
+                @bind-value:event="oninput" type="text" />
+                <select name="number"
+                @bind-value="@SpotifySearchType"
+                @bind-value:event="oninput">
+                    <option value="">Select a type</option>
+                    <option value="track">Track</option>
+                    <option value="album">Album</option>
+                    <option value="artist">Artist</option>
+                    <option value="playlist">Playlist</option>
+                    <option value="show">Show</option>
+                    <option value="episode">Episode</option>
+                    <option value="audiobook">Audiobook</option>
+                </select>
+                <button @onclick="SearchSpotify" class="btn btn-primary">Search</button>
+            </div>
+
+            <br />
+
+            @if (Tracks != null)
+            {
+                <button class="btn btn-primary" @onclick="() => TracksHide = !TracksHide">@(TracksHide ? "Show" : "Hide")</button>
+            }
+            @if (Tracks != null && !TracksHide)
+            {
+                <br />
+                for (var i = 0; i < Tracks.Count(); ++i)
+                {
+
+                    var title = Tracks.ElementAt(i).Title;
+                    var author = Tracks.ElementAt(i).Author;
+                    var combine = title + " " + author;
+
+                    <div class="track-card">
+                        <a class="text-decoration-none">
+                            <img class="imgTrackCard" src="@Tracks.ElementAt(i).ImgUrl">
+                            <div class="track-card-text">@(title + '\n' + author)</div>
+                        </a>
+
+                        <button @onclick="() => ModifyTrack(combine)" class="btn modifyButton">Modify</button>
+                    </div>
+
+                }
+            }
+
+            @if (Loading)
+            {
+                <div class="spinnerBg">
+                    <div class="spinner"></div>
+                </div>
+            }
+        </div>
+        @if (_audioFiles != null)
+        {
+            <div class="previousFiles">
+                @if (_audioFiles != null && _audioFiles.Any())
+                {
+                    <button class="btn btn-primary" @onclick="() => ViewPreviousFiles = !ViewPreviousFiles">Click to view/hide previous files</button>
+                }
+                @if (ViewPreviousFiles)
+                {
+                    <br />
+                    <br />
+                    <div>Previous Files:</div>
+                    @foreach (var file in _audioFiles)
+                    {
+                        <br />
+                        <div id="audioParent">
+                            @file.Title
+                            <br />
+                            <audio id="audioPlayer" controls src="\@file.AudioPath"></audio>
+                            <div>
+                                Tempo: @file.Tempo
+                                Pitch: @file.Pitch
+                                Rate: @file.Rate
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" @onclick="() => ReturnTo(file.Id)">Return to this file</button>
+                        <br />
+                    }
+                }
+            </div>
+        }
+        @if (_audioFile.Created)
+        {
+            <div class="bottom-section">
+                <div class="audio-controls">
+                    <div>
+                        Return to origin file
+                        <button class="btn btn-primary" @onclick="ReturnToOrigin">Return</button>
+                    </div>
+                    <div>
+                        Return to previous file
+                        <button class="btn btn-primary" @onclick="ReturnToPrevious">Return</button>
+                    </div>
+                </div>
+
+                <div class="container sample center">
+                    <span>Tempo</span>
+                    <IgbSlider Change=OnChangeTempo Max="2"
+                               Min="0"
+                               Value="_settings.Tempo"
+                               Step="0.01">
+                    </IgbSlider>
+                    <div class="value-container">
+                        <span class="slider-label">Tempo: @_settings.Tempo</span>
+                    </div>
+                    <span>Pitch</span>
+                    <IgbSlider Change=OnChangePitch Max="2"
+                               Min="0"
+                               Value="_settings.Pitch"
+                               Step="0.01">
+                    </IgbSlider>
+                    <div class="value-container">
+                        <span class="slider-label">Pitch: @_settings.Pitch</span>
+                    </div>
+                    <span>Rate</span>
+                    <IgbSlider Change=OnChangeRate Max="2"
+                               Min="0"
+                               Value="_settings.Rate"
+                               Step="0.01">
+                    </IgbSlider>
+                    <div class="value-container">
+                        <span class="slider-label">Rate: @_settings.Rate</span>
+                    </div>
+                </div>
+                <br />
+
+                <button class="btn btn-primary" @onclick="ChangeSound">Change</button>
+            </div>
+        }
+
+    </div>
+</div>
+@if (_audioFile.Created)
+{
+    <div id="audioParent" class="sticky-bottom">
+        @_audioFile.Title
+        <br />
+        <audio id="audioPlayer" controls src="\@_audioFile.AudioPath"></audio>
+        <div>
+            Tempo: @_audioFile.Tempo
+            Pitch: @_audioFile.Pitch
+            Rate: @_audioFile.Rate
+        </div>
+    </div>
+}
+
+<script>
+    function UpdateSpotify() {
+        var el = document.getElementById('spotifyPartial');
+        var autB = document.getElementById('SpotifyAut');
+        autB.style.display = 'none';
+        el.style.display = 'block';
+    }
+</script>
+@code
+{
+    private async Task ModifyTrack(string title)
+    {
+        Loading = true;
+        var videoId = await YoutubeDownloader.GetVideoIdByTitleAsync(title);
+        await AudioService.LoadFromYoutube($"https://www.youtube.com/watch?v={videoId}");
+        _audioFile = await AudioService.GetCurrentFile();
+        _audioFiles = await AudioService.GetList();
+        Loading = false;
+        StateHasChanged();
+    }
+
+    private async Task SpotifyConnect()
+    {
+        var url = await SpotifyClient.Authorize();
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        StateHasChanged();
+        await JSRuntime.InvokeVoidAsync("UpdateSpotify");
+    }
+
+    IEnumerable<TrackModel> Tracks;
+    bool TracksHide = true;
+
+    public class TrackModel
+    {
+        public string Title { get; set; }
+        public string Author { get; set; }
+        public string ImgUrl { get; set; }
+    }
+
+    private async Task SearchSpotify()
+    {
+        Loading = true;
+        SpotifySearchType ??= "track";
+        var res = await SpotifyClient.SearchFor(SpotifySearch, Enum.Parse<SpotifyTypes>(SpotifySearchType));
+
+        switch (SpotifySearchType)
+        {
+            case "playlist":
+                {
+                    var playlistId = res.playlists.items[0].id;
+                    var tracks = await SpotifyClient.ConvertPlaylist(playlistId);
+                    Tracks = tracks.Select(x => new TrackModel() { Title = x.track.name, Author = x.track.artists[0].name, ImgUrl = x.track.album.images[1].url });
+
+                    break;
+                }
+        }
+
+        TracksHide = false;
+        Loading = false;
+    }
+
+    private async Task ReturnToOrigin()
+    {
+        await AudioService.ReturnToOrigin();
+        _audioFile = await AudioService.GetCurrentFile();
+        _audioFiles = await AudioService.GetList();
+    }
+
+    private async Task ReturnTo(int id)
+    {
+        await AudioService.ReturnTo(id);
+        _audioFile = await AudioService.GetCurrentFile();
+        _audioFiles = await AudioService.GetList();
+    }
+
+    private async Task ReturnToPrevious()
+    {
+        await AudioService.ReturnToPrevious();
+        _audioFile = await AudioService.GetCurrentFile();
+        _audioFiles = await AudioService.GetList();
+    }
+
+    private string YoutubeLink;
+    private string SpotifySearch;
+    private string SpotifySearchType;
+
+    private async Task LoadFromYoutube()
+    {
+        if (YoutubeLink == null || !YoutubeLink.Contains("https://www.youtube.com/watch?"))
+        {
+            return;
+        }
+
+        Loading = true;
+        await AudioService.LoadFromYoutube(YoutubeLink);
+        _audioFile = await AudioService.GetCurrentFile();
+        _audioFiles = await AudioService.GetList();
+        Loading = false;
+        StateHasChanged();
+    }
+
+    private IEnumerable<AudioFile> _audioFiles;
+    private AudioFile _audioFile = new AudioFile();
+    private SoundTouchSettings _settings = new SoundTouchSettings();
+    private bool Loading = false;
+    private bool ViewPreviousFiles = false;
+
+    private async Task FileInput(InputFileChangeEventArgs e)
+    {
+        Loading = true;
+        await AudioService.FileInput(e);
+        _audioFile = await AudioService.GetCurrentFile();
+        _audioFiles = await AudioService.GetList();
+        Loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ChangeSound()
+    {
+        Loading = true;
+        await AudioService.ChangeSound(_settings);
+        _audioFile = await AudioService.GetCurrentFile();
+        _audioFiles = await AudioService.GetList();
+        Loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnChangeTempo(IgbNumberEventArgs e)
+    {
+        if (e != null)
+        {
+            _settings.Tempo = e.Detail;
+        }
+    }
+    private void OnChangePitch(IgbNumberEventArgs e)
+    {
+        if (e != null)
+        {
+            _settings.Pitch = e.Detail;
+        }
+    }
+    private void OnChangeRate(IgbNumberEventArgs e)
+    {
+        if (e != null)
+        {
+            _settings.Rate = e.Detail;
+        }
+    }
+}
