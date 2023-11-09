@@ -93,6 +93,17 @@ namespace SoundChangerBlazorServer.Data
             return playlist.tracks.items;
         }
 
+        public async Task<SpotifyTrack.Root> ConvertTrack(string id)
+        {
+            var restRequest = new RestRequest($"/v1/tracks/{id}", Method.Get);
+
+            var resp = await RestClient.ExecuteAsync(restRequest);
+
+            var track = JsonConvert.DeserializeObject<SpotifyTrack.Root>(resp.Content);
+
+            return track;
+        }
+
         public async Task SetToken(string code)
         {
             var restRequest = new RestRequest("api/token", method: Method.Post);

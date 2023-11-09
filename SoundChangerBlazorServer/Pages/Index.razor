@@ -57,12 +57,7 @@
                 @bind-value:event="oninput">
                     <option value="">Select a type</option>
                     <option value="track">Track</option>
-                    <option value="album">Album</option>
-                    <option value="artist">Artist</option>
                     <option value="playlist">Playlist</option>
-                    <option value="show">Show</option>
-                    <option value="episode">Episode</option>
-                    <option value="audiobook">Audiobook</option>
                 </select>
                 <button @onclick="SearchSpotify" class="btn btn-primary">Search</button>
             </div>
@@ -75,6 +70,8 @@
             }
             @if (Tracks != null && !TracksHide)
             {
+                <br />
+                <button class="btn btn-primary" @onclick="ClearTracks">Clear</button>
                 <br />
                 for (var i = 0; i < Tracks.Count(); ++i)
                 {
@@ -247,16 +244,36 @@
         {
             case "playlist":
                 {
+                    if (res.playlists == null)
+                    {
+                        break;
+                    }
                     var playlistId = res.playlists.items[0].id;
                     var tracks = await SpotifyClient.ConvertPlaylist(playlistId);
                     Tracks = tracks.Select(x => new TrackModel() { Title = x.track.name, Author = x.track.artists[0].name, ImgUrl = x.track.album.images[1].url });
+                    break;
+                }
+            case "track":
+                {
+                    if(res.tracks == null)
+                    {
+                        break;
+                    }
 
+                    var trackId = res.tracks.items[0].id;
+                    var track = await SpotifyClient.ConvertTrack(trackId);
+                    Tracks = new TrackModel[] { new TrackModel() { Title = track.name, Author = track.artists[0].name, ImgUrl = track.album.images[1].url } };
                     break;
                 }
         }
 
         TracksHide = false;
         Loading = false;
+    }
+
+    private async Task ClearTracks()
+    {
+        Tracks = Enumerable.Empty<TrackModel>();
     }
 
     private async Task ReturnToOrigin()
