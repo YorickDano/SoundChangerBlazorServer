@@ -12,6 +12,7 @@
         public double Tempo { get; set; } = 1;
         public double Pitch { get; set; } = 1;
         public double Rate { get; set; } = 1;
+        public TimeSpan Duration { get; set; }
 
         public string FilePath
         {

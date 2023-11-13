@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 
-namespace SoundChangerBlazorServer.Models
+namespace SoundChangerBlazorServer.Models.SpotifyModels
 {
     public class SpotifyClientSettings
     {

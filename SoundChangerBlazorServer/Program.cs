@@ -2,7 +2,8 @@ using IgniteUI.Blazor.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting.Internal;
 using SoundChangerBlazorServer.Data;
-using SoundChangerBlazorServer.Models;
+using SoundChangerBlazorServer.Models.SpotifyModels;
+using SoundChangerBlazorServer.Models.YoutubeModels;
 using Syncfusion.Blazor;
 
 var builder = WebApplication.CreateBuilder(args);

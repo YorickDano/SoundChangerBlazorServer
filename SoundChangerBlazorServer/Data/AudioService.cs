@@ -1,6 +1,7 @@
 ﻿using MediaToolkit;
 using MediaToolkit.Model;
 using Microsoft.AspNetCore.Components.Forms;
+using NAudio.MediaFoundation;
 using NAudio.Wave;
 using SoundChangerBlazorServer.Models;
 using SoundTouch.Net.NAudioSupport;
@@ -22,6 +23,7 @@ namespace SoundChangerBlazorServer.Data
 
         public async Task<AudioFile> GetCurrentFile() => _audioFile;
         public async Task<IEnumerable<AudioFile>> GetList() => _audioFiles;
+        public async Task<AudioFile> FindFile(string title) => _audioFiles.First(x => x.Title == title);
         public async Task ReturnToOrigin() => _audioFile = _audioFiles[0];
         public async Task ReturnTo(int id) => _audioFile = _audioFiles.First(x => x.Id == id);
 
@@ -72,6 +74,7 @@ namespace SoundChangerBlazorServer.Data
                 using (var mp3 = new Mp3FileReader(_audioFile.FilePath))
                 {
                     _audioFile.Extension = ".wav";
+                    _audioFile.Duration = mp3.TotalTime;
                     using (var pcm = WaveFormatConversionStream.CreatePcmStream(mp3))
                     {
                         WaveFileWriter.CreateWaveFile(_audioFile.FilePath, pcm);
@@ -91,25 +94,30 @@ namespace SoundChangerBlazorServer.Data
 
         }
 
-        public async Task LoadFromYoutube(string youtubeLink)
+        public async Task<bool> LoadFromYoutube(string youtubeLink)
         {
             var wwwrootPath = Path.Combine(_hostingEnvironment.WebRootPath);
 
-            var fileNameAndPath = await YoutubeDownloader.Download(youtubeLink, wwwrootPath);
+            var fileInfo = await YoutubeDownloader.Download(youtubeLink, wwwrootPath);
+
+            if (string.IsNullOrEmpty(fileInfo.Item1))
+            {
+                return false;
+            }
+
             _audioFile = new AudioFile()
             {
                 Id = _audioFiles.Count,
-                FileName = Path.GetFileNameWithoutExtension(fileNameAndPath.Item1),
-                Title = Path.GetFileNameWithoutExtension(fileNameAndPath.Item1),
+                FileName = Path.GetFileNameWithoutExtension(fileInfo.Item1),
+                Title = Path.GetFileNameWithoutExtension(fileInfo.Item1),
                 Extension = ".wav",
                 Format = "WAVE",
                 WWWRootPath = wwwrootPath,
             };
             _audioFile.FileName += _audioFiles.Count;
-
             var fileCreation = File.Create(_audioFile.FilePath);
             fileCreation.Close();
-            var inputFile = new MediaFile { Filename = fileNameAndPath.Item2 };
+            var inputFile = new MediaFile { Filename = fileInfo.Item2 };
             var outputFile = new MediaFile { Filename = _audioFile.FilePath };
 
             using (var engine = new Engine())
@@ -120,9 +128,11 @@ namespace SoundChangerBlazorServer.Data
             }
 
             _audioFile.Created = true;
-    
             _audioFiles.Add(_audioFile);
-            File.Delete(fileNameAndPath.Item2);
+
+            File.Delete(fileInfo.Item2);
+
+            return true;
         }
 
         public async Task ChangeSound(SoundTouchSettings settings)
@@ -139,8 +149,6 @@ namespace SoundChangerBlazorServer.Data
                 Rate = settings.Rate,
             };
 
-            var fs = File.Create(newAudioFile.FilePath);
-            fs.Close();
 
             await Task.Run(() =>
             {
@@ -155,6 +163,30 @@ namespace SoundChangerBlazorServer.Data
             _audioFiles.Add(newAudioFile);
             _audioFile.Id = _audioFiles.Count;
             _audioFile = _audioFiles[^1];
+        }
+
+        public async Task ConvertCurrentToMp3()
+        {
+            using var fileReader = new WaveFileReader(_audioFile.FilePath);
+            _audioFile.Extension = ".mp3";
+            var mediaType = MediaFoundationEncoder.SelectMediaType(AudioSubtypes.MFAudioFormat_MP3,
+                            fileReader.WaveFormat, 192000);
+            using (var encoder = new MediaFoundationEncoder(mediaType))
+            {
+                MediaFoundationApi.Startup();
+                MediaFoundationEncoder.EncodeToMp3(fileReader, _audioFile.FilePath, 192000);
+                MediaFoundationApi.Shutdown();
+            }
+        }
+
+
+
+        public async Task<AudioFile> CutFromTo(AudioFile audioFile, TimeSpan from, TimeSpan to)
+        {
+            using var fileReader = new AudioFileReader(audioFile.FilePath);
+
+
+            return null;
         }
     }
 }

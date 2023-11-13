@@ -1,0 +1,22 @@
+﻿@page "/{title}"
+
+@inject AudioService AudioService;
+
+<h3>TrackWorkspace</h3>
+
+@code 
+{
+
+    [Parameter]
+    public string Title { get; set; }
+
+    private AudioFile AudioFile { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+
+        AudioFile = await AudioService.FindFile(Title);
+    }
+
+}

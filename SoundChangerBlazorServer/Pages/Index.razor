@@ -1,18 +1,7 @@
 ﻿@page "/"
 @page "/home"
+@using SoundChangerBlazorServer.Models.YoutubeModels;
 
-@using MediaToolkit.Model;
-@using MediaToolkit;
-@using Microsoft.AspNetCore.WebUtilities;
-@using NAudio.Wave;
-@using NAudio.Wave.SampleProviders;
-@using SoundChangerBlazorServer.Data;
-@using SoundChangerBlazorServer.Models;
-@using SoundChangerBlazorServer.Models.SpotifyModels;
-@using SoundTouch.Net.NAudioSupport;
-@using IgniteUI.Blazor.Controls;
-@using VideoLibrary;
-@using Syncfusion.Blazor.Spinner;
 @inject IJSRuntime JSRuntime;
 @inject AudioService AudioService;
 @inject SpotifyClient SpotifyClient;
@@ -24,24 +13,41 @@
 <div class="container">
     <div class="main-content">
         <div class="top-section">
+            @if (IsAlertMessage)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert" style="font-size: 20px;font-weight:600;">
+                    <strong>Fail</strong>
+                    @AlertMessage
+                    <button @onclick="CloseAlert" id="alert" type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
             <label class="file-input">
                 <InputFile class="file-input" OnChange="@FileInput" />
                 File input
             </label>
             <br />
             <div>OR</div>
-            <br />
-            <div>
-                Link from youtube
+            <div id="youtubePartial">
+                <br />
+                <div>Search in youtube</div>
+                <input placeholder="Enter url or title"
+                @bind-value="@YoutubeSearch"
+                @bind-value:event="oninput" type="text" />
+                <select name="number"
+                @bind-value="@YoutubeSearchType"
+                @bind-value:event="oninput">
+                    <option value="">Select a type</option>
+                    <option value="video">Video</option>
+                    <option value="playlist">Playlist</option>
+                </select>
+                <button @onclick="SearchYoutube" class="btn btn-primary">Search</button>
             </div>
-            <input placeholder="Enter your URL"
-            @bind-value="@YoutubeLink"
-            @bind-value:event="oninput" type="text" />
-            <button @onclick="LoadFromYoutube" class="btn btn-primary">Load</button>
+            <br />
+            <div>OR</div>
+            <br />
             @if (!SpotifyClient.IsAuthorized)
             {
                 <div id="SpotifyAut">
-                    <br />
                     <button @onclick="SpotifyConnect" class="btn btn-primary-green">Authorize Spotify</button>
                 </div>
             }
@@ -61,17 +67,36 @@
                 </select>
                 <button @onclick="SearchSpotify" class="btn btn-primary">Search</button>
             </div>
+            <br />
+            @if (Videos != null)
+            {
+                <button class="btn btn-primary" @onclick="() => VideosHide = !VideosHide">@(VideosHide ? "Show videos" : "Hide videos")</button>
+            }
+            @if (Videos != null && !VideosHide)
+            {
+                <br />
+                for (var i = 0; i < Videos.Count(); ++i)
+                {
+                    var video = Videos.ElementAt(i);
+                    <div class="track-card">
+                        <a class="text-decoration-none">
+                            <img class="imgTrackCard" src="@video.ImgUrl">
+                            <div class="track-card-text">@video.Title</div>
+                        </a>
 
+                        <button @onclick="() => ModifyVideo(video.Id)" class="btn modifyButton">Modify</button>
+                    </div>
+
+                }
+            }
             <br />
 
             @if (Tracks != null)
             {
-                <button class="btn btn-primary" @onclick="() => TracksHide = !TracksHide">@(TracksHide ? "Show" : "Hide")</button>
+                <button class="btn btn-primary" @onclick="() => TracksHide = !TracksHide">@(TracksHide ? "Show tracks" : "Hide tracks")</button>
             }
             @if (Tracks != null && !TracksHide)
             {
-                <br />
-                <button class="btn btn-primary" @onclick="ClearTracks">Clear</button>
                 <br />
                 for (var i = 0; i < Tracks.Count(); ++i)
                 {
@@ -181,6 +206,7 @@
 
     </div>
 </div>
+
 @if (_audioFile.Created)
 {
     <div id="audioParent" class="sticky-bottom">
@@ -205,11 +231,48 @@
 </script>
 @code
 {
+    private bool IsAlertMessage = false;
+    private string AlertMessage;
+
+    private async Task CloseAlert()
+    {
+        IsAlertMessage = false;
+    }
+    private async Task ConvertToMp3()
+    {
+        await AudioService.ConvertCurrentToMp3();
+    }
+    private async Task ModifyVideo(string id)
+    {
+        Loading = true;
+        var res = await AudioService.LoadFromYoutube(id);
+
+        if (!res)
+        {
+            AlertMessage = "Something break or track is too long (max 10 min)";
+            IsAlertMessage = true;
+            Loading = false;
+            return;
+        }
+          _audioFile = await AudioService.GetCurrentFile();
+        _audioFiles = await AudioService.GetList();
+        Loading = false;
+        StateHasChanged();
+    }
     private async Task ModifyTrack(string title)
     {
         Loading = true;
         var videoId = await YoutubeDownloader.GetVideoIdByTitleAsync(title);
-        await AudioService.LoadFromYoutube($"https://www.youtube.com/watch?v={videoId}");
+        var res = await AudioService.LoadFromYoutube($"https://www.youtube.com/watch?v={videoId}");
+
+        if (!res)
+        {
+            AlertMessage = "Something break or track is too long (max 10 min)";
+            IsAlertMessage = true;
+            Loading = false;
+            return;
+        }
+
         _audioFile = await AudioService.GetCurrentFile();
         _audioFiles = await AudioService.GetList();
         Loading = false;
@@ -225,7 +288,9 @@
     }
 
     IEnumerable<TrackModel> Tracks;
+    IEnumerable<YoutubeVideo> Videos;
     bool TracksHide = true;
+    bool VideosHide = true;
 
     public class TrackModel
     {
@@ -255,7 +320,7 @@
                 }
             case "track":
                 {
-                    if(res.tracks == null)
+                    if (res.tracks == null)
                     {
                         break;
                     }
@@ -297,23 +362,31 @@
         _audioFiles = await AudioService.GetList();
     }
 
-    private string YoutubeLink;
+    private string YoutubeSearch;
+    private string YoutubeSearchType;
+
     private string SpotifySearch;
     private string SpotifySearchType;
 
-    private async Task LoadFromYoutube()
-    {
-        if (YoutubeLink == null || !YoutubeLink.Contains("https://www.youtube.com/watch?"))
-        {
-            return;
-        }
 
+
+    private async Task SearchYoutube()
+    {
         Loading = true;
-        await AudioService.LoadFromYoutube(YoutubeLink);
-        _audioFile = await AudioService.GetCurrentFile();
-        _audioFiles = await AudioService.GetList();
+        if (YoutubeSearchType == "video")
+        {
+            var video = await YoutubeDownloader.GetVideoAsync(YoutubeSearch);
+
+            Videos = new YoutubeVideo[] { video };
+        }
+        else
+        {
+            var playlist = await YoutubeDownloader.GetPlaylistAsync(YoutubeSearch);
+
+            Videos = playlist.Videos;
+        }
+        VideosHide = false;
         Loading = false;
-        StateHasChanged();
     }
 
     private IEnumerable<AudioFile> _audioFiles;

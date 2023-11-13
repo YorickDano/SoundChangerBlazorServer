@@ -14,7 +14,7 @@
 
         public async Task<bool> YoutubeToSpotifySong(string url)
         {
-            var video = await YoutubeDownloader.GetVideoInfoAsync(url);      
+            var video = await YoutubeDownloader.GetVideoAsync(url);      
 
             return false;
         }

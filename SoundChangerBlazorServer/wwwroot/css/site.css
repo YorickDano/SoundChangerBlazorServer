@@ -262,27 +262,28 @@ input[type="file"] {
 
 .track-card {
     display: inline-block;
-    width: 300px;
-    height: 300px;
+    padding: 10px 0 10px 0;
+    
     position: relative;
-    margin: 10px 0 30px 10px;
+    margin: 0px 10px 0px 10px;
 }
-
+.imgTrackCard {
+    max-width: 300px;
+    display:flex;
+}
 .track-card-text {
     position: absolute;
-    bottom: 0;
+    bottom: 15%;
     left: 0;
     padding-top: 60px;
-    padding-left: 3px;
-    padding-right: 2px;
-    width: 300px;
-    height: 90px;
+    width:100%;
     background-image: linear-gradient(rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 100%);
     color: white;
     text-overflow: ellipsis;
     overflow: hidden;
     white-space: nowrap;
     font-size: 22px;
+    display:flex;
 }
 
 .imgTrackCart {
@@ -295,7 +296,7 @@ input[type="file"] {
     align-items: center;
     width: 100%;
     height: 30px;
-    margin: 5px 0 10px 0;
+    margin: 30px 0 0 0;
     background-color: #1DB954;
     color: white;
     border: none;

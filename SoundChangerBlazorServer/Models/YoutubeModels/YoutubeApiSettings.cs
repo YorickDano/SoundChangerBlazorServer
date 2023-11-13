@@ -1,4 +1,4 @@
-﻿namespace SoundChangerBlazorServer.Models
+﻿namespace SoundChangerBlazorServer.Models.YoutubeModels
 {
     public class YoutubeApiSettings
     {
