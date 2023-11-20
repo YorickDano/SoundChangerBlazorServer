@@ -60,7 +60,7 @@ namespace SoundChangerBlazorServer.Data
 
             var response = await AuthorizeClient.GetAsync(restRequest);
             var uri = response.ResponseUri;
-
+            IsAuthorized = true;
             if (uri != null)
             {
                 return uri.ToString();

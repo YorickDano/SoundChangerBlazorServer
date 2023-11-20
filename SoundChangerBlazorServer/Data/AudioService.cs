@@ -27,7 +27,21 @@ namespace SoundChangerBlazorServer.Data
         public async Task ReturnToOrigin() => _audioFile = _audioFiles[0];
         public async Task ReturnTo(int id) => _audioFile = _audioFiles.First(x => x.Id == id);
 
-        public async Task DeleteAll()
+        public async Task DeleteAllAsync()
+        {
+            var directoryInfo = new DirectoryInfo(_hostingEnvironment.WebRootPath);
+            await Task.Run(() =>
+            {
+                foreach (var file in directoryInfo.GetFiles("*.wav").Where(x=> x.Name != _audioFile.FileName))
+                {
+                    file.Delete();
+                }
+            });
+            _audioFiles.Clear();
+            _audioFiles.Add(_audioFile);
+        }
+
+        public async Task Clear()
         {
             var directoryInfo = new DirectoryInfo(_hostingEnvironment.WebRootPath);
             await Task.Run(() =>
@@ -117,14 +131,10 @@ namespace SoundChangerBlazorServer.Data
             _audioFile.FileName += _audioFiles.Count;
             var fileCreation = File.Create(_audioFile.FilePath);
             fileCreation.Close();
-            var inputFile = new MediaFile { Filename = fileInfo.Item2 };
-            var outputFile = new MediaFile { Filename = _audioFile.FilePath };
-
-            using (var engine = new Engine())
+           
+            using (var video = new MediaFoundationReader(fileInfo.Item2))
             {
-                engine.GetMetadata(inputFile);
-
-                engine.Convert(inputFile, outputFile);
+                WaveFileWriter.CreateWaveFile(_audioFile.FilePath, video);
             }
 
             _audioFile.Created = true;

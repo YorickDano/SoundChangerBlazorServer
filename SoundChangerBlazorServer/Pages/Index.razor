@@ -7,6 +7,7 @@
 @inject SpotifyClient SpotifyClient;
 @inject NavigationManager NavigationManager
 @inject YoutubeDownloader YoutubeDownloader;
+@inject IWebHostEnvironment WebHostEnv;
 
 <PageTitle>Index</PageTitle>
 
@@ -36,7 +37,6 @@
                 <select name="number"
                 @bind-value="@YoutubeSearchType"
                 @bind-value:event="oninput">
-                    <option value="">Select a type</option>
                     <option value="video">Video</option>
                     <option value="playlist">Playlist</option>
                 </select>
@@ -51,22 +51,22 @@
                     <button @onclick="SpotifyConnect" class="btn btn-primary-green">Authorize Spotify</button>
                 </div>
             }
-
-            <div id="spotifyPartial" style="display:none;">
-                <br />
-                <div>Search in spotify</div>
-                <input placeholder="Enter title"
-                @bind-value="@SpotifySearch"
-                @bind-value:event="oninput" type="text" />
-                <select name="number"
-                @bind-value="@SpotifySearchType"
-                @bind-value:event="oninput">
-                    <option value="">Select a type</option>
-                    <option value="track">Track</option>
-                    <option value="playlist">Playlist</option>
-                </select>
-                <button @onclick="SearchSpotify" class="btn btn-primary">Search</button>
-            </div>
+            @if (SpotifyClient.IsAuthorized)
+            {
+                <div id="spotifyPartial">
+                    <div>Search in spotify</div>
+                    <input placeholder="Enter title"
+                    @bind-value="@SpotifySearch"
+                    @bind-value:event="oninput" type="text" />
+                    <select name="number"
+                    @bind-value="@SpotifySearchType"
+                    @bind-value:event="oninput">
+                        <option value="track">Track</option>
+                        <option value="playlist">Playlist</option>
+                    </select>
+                    <button @onclick="SearchSpotify" class="btn btn-primary">Search</button>
+                </div>
+            }
             <br />
             @if (Videos != null)
             {
@@ -79,7 +79,7 @@
                 {
                     var video = Videos.ElementAt(i);
                     <div class="track-card">
-                        <a class="text-decoration-none">
+                        <a href="@video.Url" class="text-decoration-none" target="_blank">
                             <img class="imgTrackCard" src="@video.ImgUrl">
                             <div class="track-card-text">@video.Title</div>
                         </a>
@@ -134,15 +134,13 @@
                 @if (ViewPreviousFiles)
                 {
                     <br />
-                    <br />
                     <div>Previous Files:</div>
                     @foreach (var file in _audioFiles)
-                    {
-                        <br />
+                    {       
                         <div id="audioParent">
                             @file.Title
                             <br />
-                            <audio id="audioPlayer" controls src="\@file.AudioPath"></audio>
+                            <audio id="audioPlayer" controls src="@file.AudioPath"></audio>
                             <div>
                                 Tempo: @file.Tempo
                                 Pitch: @file.Pitch
@@ -159,10 +157,7 @@
         {
             <div class="bottom-section">
                 <div class="audio-controls">
-                    <div>
-                        Return to origin file
-                        <button class="btn btn-primary" @onclick="ReturnToOrigin">Return</button>
-                    </div>
+                    <button class="btn btn-danger" @onclick="DeleteAll">Delete All</button>
                     <div>
                         Return to previous file
                         <button class="btn btn-primary" @onclick="ReturnToPrevious">Return</button>
@@ -254,7 +249,7 @@
             Loading = false;
             return;
         }
-          _audioFile = await AudioService.GetCurrentFile();
+        _audioFile = await AudioService.GetCurrentFile();
         _audioFiles = await AudioService.GetList();
         Loading = false;
         StateHasChanged();
@@ -284,7 +279,7 @@
         var url = await SpotifyClient.Authorize();
         await JSRuntime.InvokeVoidAsync("open", url, "_blank");
         StateHasChanged();
-        await JSRuntime.InvokeVoidAsync("UpdateSpotify");
+        //await JSRuntime.InvokeVoidAsync("UpdateSpotify");
     }
 
     IEnumerable<TrackModel> Tracks;
@@ -363,10 +358,10 @@
     }
 
     private string YoutubeSearch;
-    private string YoutubeSearchType;
+    private string YoutubeSearchType = "video";
 
     private string SpotifySearch;
-    private string SpotifySearchType;
+    private string SpotifySearchType = "track";
 
 
 
@@ -375,9 +370,9 @@
         Loading = true;
         if (YoutubeSearchType == "video")
         {
-            var video = await YoutubeDownloader.GetVideoAsync(YoutubeSearch);
+            var videos = await YoutubeDownloader.GetVideosAsync(YoutubeSearch);
 
-            Videos = new YoutubeVideo[] { video };
+            Videos = videos;
         }
         else
         {
@@ -435,5 +430,9 @@
         {
             _settings.Rate = e.Detail;
         }
+    }
+    private async Task DeleteAll()
+    {
+        await AudioService.DeleteAllAsync();
     }
 }

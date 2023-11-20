@@ -2,6 +2,7 @@
 using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.Options;
 using SoundChangerBlazorServer.Models.YoutubeModels;
+using System.Text.Json;
 using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Videos.Streams;
@@ -31,19 +32,32 @@ namespace SoundChangerBlazorServer.Data
             var videoInfo = await youtubeClient.Videos.GetAsync(videoUrl);
             if (videoInfo.Duration > TimeSpan.FromMinutes(10))
             {
-                return ("","");
+                return ("", "");
             }
 
             var streamManifest = await youtubeClient.Videos.Streams.GetManifestAsync(videoUrl);
             var streamInfo = streamManifest.GetAudioStreams().GetWithHighestBitrate();
 
-            var restrictedCharacters = new char[] { '\\', '/', ':', '*', '?', '\"', '<', '>', '|', '+' };
+            var restrictedCharacters = new char[] { '\\', '/', ':', '*', '?', '\"', '<', '>', '|', '+', '#' };
             var videoTitle = restrictedCharacters.Aggregate(videoInfo.Title, (c1, c2) => c1.Replace(c2, ' '));
 
             var filePath = Path.Combine(path, videoTitle + ".mp4");
             await youtubeClient.Videos.Streams.DownloadAsync(streamInfo, filePath);
 
             return (videoTitle, filePath);
+        }
+
+        public async Task<IEnumerable<YoutubeVideo>> GetVideosAsync(string query)
+        {
+            var videos = await youtubeClient.Search.GetVideosAsync(query);
+
+            return videos.Select(x => new YoutubeVideo()
+            {
+                Title = x.Title,
+                Url = x.Url,
+                ImgUrl = x.Thumbnails[3].Url,
+                Id = x.Id
+            });
         }
 
         public async Task<YoutubeVideo> GetVideoAsync(string query)
@@ -64,7 +78,7 @@ namespace SoundChangerBlazorServer.Data
                 youtubeVideo.Url = videoSearch.Url;
                 youtubeVideo.Title = videoSearch.Title;
                 youtubeVideo.ImgUrl = videoSearch.Thumbnails[3].Url;
-            }         
+            }
 
             return youtubeVideo;
         }
@@ -73,7 +87,7 @@ namespace SoundChangerBlazorServer.Data
         {
             var searchListRequest = YouTubeService.Search.List("snippet");
             searchListRequest.Q = titleAuthor;
-            searchListRequest.MaxResults = 1;
+            searchListRequest.MaxResults = 5;
 
             var searchListResponse = await searchListRequest.ExecuteAsync();
 

@@ -14,7 +14,6 @@ builder.Services.Configure<YoutubeApiSettings>(builder.Configuration.GetSection(
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-//builder.Services.AddTransient<SpotifyClientSettings>();
 builder.Services.AddSingleton<AudioService>();
 builder.Services.AddSingleton<SpotifyClient>();
 builder.Services.AddSingleton<YoutubeDownloader>();
@@ -57,6 +56,6 @@ app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
 var service = app.Services.GetRequiredService<AudioService>();
-await service.DeleteAll();
+await service.Clear();
 
 app.Run();
