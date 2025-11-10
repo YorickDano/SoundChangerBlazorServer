@@ -366,3 +366,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/SoundChangerBlazorServer/wwwroot/yt-dlp.exe
+/SoundChangerBlazorServer/wwwroot/ffmpeg.exe
