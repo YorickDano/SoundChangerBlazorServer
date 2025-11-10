@@ -1,0 +1,575 @@
+﻿@page "/visualizer/{SetHashCode:int}"
+
+@inject StateContainer StateContainer;
+@inject IJSRuntime JS;
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bigger Audio Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            width: 90%;
+            max-width: 1200px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 25px;
+            opacity: 0.9;
+            font-size: 1.2rem;
+        }
+
+        .audio-container {
+            width: 100%;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+        }
+
+        audio {
+            width: 80%;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 25px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .control-group {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 200px;
+        }
+
+        .control-title {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .control-value {
+            font-size: 1.2rem;
+            color: #fdbb2d;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 10px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            outline: none;
+        }
+
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: #fdbb2d;
+                cursor: pointer;
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            }
+
+        .visualizer-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 25px 0;
+        }
+
+        .visualizer {
+            width: 100%;
+            height: 300px; /* Much bigger height */
+            position: relative;
+            overflow: hidden;
+            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .visualizer-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .vis-btn {
+            background: rgba(253, 187, 45, 0.3);
+            color: white;
+            border: 2px solid #fdbb2d;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+            .vis-btn:hover {
+                background: rgba(253, 187, 45, 0.5);
+            }
+
+            .vis-btn.active {
+                background: #fdbb2d;
+                color: #1a2a6c;
+                font-weight: bold;
+            }
+
+        .btn {
+            background: #fdbb2d;
+            color: #1a2a6c;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            margin: 10px;
+        }
+
+            .btn:hover {
+                background: #ffcc44;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+            }
+
+            .btn:active {
+                transform: translateY(0);
+            }
+
+        .visualizer-info {
+            text-align: center;
+            margin-top: 15px;
+            font-style: italic;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bigger Audio Visualizer</h1>
+        <p class="subtitle">Experience your audio with a larger, more immersive visualization</p>
+
+        <div class="audio-container">
+            <audio id="audioPlayer" controls src="\@_audioFile!.AudioPath">
+            </audio>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-title">
+                    <span>Tempo</span>
+                    <span class="control-value" id="tempo-value">1.0x</span>
+                </div>
+                <input type="range" id="tempo" min="0.1" max="2.0" step="0.01" value="1.0" />
+            </div>
+            <div class="control-group">
+                <div class="control-title">
+                    <span>Pitch</span>
+                    <span class="control-value" id="pitch-value">1.0x</span>
+                </div>
+                <input type="range" id="pitch" min="0.1" max="2.0" step="0.01" value="1.0" />
+            </div>
+
+            <div class="control-group">
+                <div class="control-title">
+                    <span>Volume</span>
+                    <span class="control-value" id="volume-value">1.0</span>
+                </div>
+                <input type="range" id="volume" min="0" max="5" step="0.01" value="1.0" />
+            </div>
+
+            <div class="control-group">
+                <div class="control-title">
+                    <span>Bass Boost</span>
+                    <span class="control-value" id="bass-value">1.0</span>
+                </div>
+                <input type="range" id="bass" min="0.1" max="2.0" step="0.1" value="1.0" />
+            </div>
+        </div>
+
+        <div class="visualizer-container">
+            <div class="visualizer-options">
+                <button class="vis-btn active" data-mode="bars">Bars</button>
+                <button class="vis-btn" data-mode="waveform">Waveform</button>
+                <button class="vis-btn" data-mode="circle">Circle</button>
+                <button class="vis-btn" data-mode="particles">Particles</button>
+            </div>
+
+            <div id="visualizerBox" class="visualizer">
+                <canvas id="visualizer"></canvas>
+            </div>
+
+            <p class="visualizer-info">Current visualization: <span id="vis-mode">Bars</span></p>
+        </div>
+
+        <button class="btn" id="fullscreenBtn">Enter Fullscreen Visualizer</button>
+    </div>
+    <script>
+        async function initApp() {
+            // Initialize variables
+            let audioContext;
+            let soundTouch;
+            let analyzer;
+            let source;
+            let gainNode;
+            let bassBoost;
+            let isPlaying = false;
+            let visualizationMode = 'bars';
+            let isFullscreen = false;
+
+
+            // Get elements
+            const audioElement = document.getElementById('audioPlayer');
+            const visualizer = document.getElementById('visualizer');
+            const visualizerBox = document.getElementById('visualizerBox');
+            const canvasCtx = visualizer.getContext('2d');
+            const tempoControl = document.getElementById('tempo');
+            const tempoValue = document.getElementById('tempo-value');
+            const pitchControl = document.getElementById('pitch');
+            const pitchValue = document.getElementById('pitch-value');
+            const volumeControl = document.getElementById('volume');
+            const volumeValue = document.getElementById('volume-value');
+            const bassControl = document.getElementById('bass');
+            const bassValue = document.getElementById('bass-value');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const visModeElement = document.getElementById('vis-mode');
+            const visButtons = document.querySelectorAll('.vis-btn');
+
+            // Set canvas dimensions
+            function resizeCanvas() {
+                visualizer.width = visualizer.offsetWidth;
+                visualizer.height = visualizer.offsetHeight;
+            }
+
+            resizeCanvas();
+
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+           
+           
+            source = audioContext.createMediaElementSource(audioElement);
+            // Create gain node for volume control
+            gainNode = audioContext.createGain();
+            await audioContext.audioWorklet.addModule('./js/soundtouch-worklet.js');
+            soundTouch = new AudioWorkletNode(audioContext, 'soundtouch-processor');
+            // Create biquad filter for bass boost
+            bassBoost = audioContext.createBiquadFilter();
+            bassBoost.type = 'lowshelf';
+            bassBoost.frequency.setValueAtTime(100, audioContext.currentTime);
+
+            // Connect nodes: source -> bassBoost -> gain -> destination
+            
+            source.connect(bassBoost);
+            bassBoost.connect(soundTouch);
+            soundTouch.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // Setup visualizer
+            setupVisualizer();
+
+
+            // Setup visualizer
+            function setupVisualizer() {
+                if (analyzer) {
+                    analyzer.disconnect();
+                }
+
+                analyzer = audioContext.createAnalyser();
+                analyzer.fftSize = 512; // Increased for more detail
+
+                // Connect the gain node to the analyzer
+                gainNode.connect(analyzer);
+
+                // Start visualization
+                visualize();
+            }
+
+            // Visualization function
+            function visualize() {
+                if (!analyzer) return;
+
+                const bufferLength = analyzer.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                const waveformArray = new Uint8Array(bufferLength);
+
+                function draw() {
+                    requestAnimationFrame(draw);
+
+                    // Clear canvas with a subtle background
+                    canvasCtx.fillStyle = 'rgb(0, 0, 0)';
+                    canvasCtx.fillRect(0, 0, visualizer.width, visualizer.height);
+
+                    // Get data based on visualization mode
+                    if (visualizationMode === 'waveform') {
+                        analyzer.getByteTimeDomainData(waveformArray);
+                    } else {
+                        analyzer.getByteFrequencyData(dataArray);
+                    }
+
+                    // Draw based on selected mode
+                    switch (visualizationMode) {
+                        case 'bars':
+                            drawBars(dataArray, bufferLength);
+                            break;
+                        case 'waveform':
+                            drawWaveform(waveformArray, bufferLength);
+                            break;
+                        case 'circle':
+                            drawCircle(dataArray, bufferLength);
+                            break;
+                        case 'particles':
+                            drawParticles(dataArray, bufferLength);
+                            break;
+                    }
+                }
+
+                draw();
+            }
+
+            // Draw bar visualization
+            function drawBars(dataArray, bufferLength) {
+                const barWidth = (visualizer.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    barHeight = dataArray[i] * (visualizer.height / 256);
+
+                    // Create gradient for bars
+                    const gradient = canvasCtx.createLinearGradient(0, visualizer.height - barHeight, 0, visualizer.height);
+                    gradient.addColorStop(0, `hsl(${i / bufferLength * 360}, 100%, 60%)`);
+                    gradient.addColorStop(1, `hsl(${i / bufferLength * 360}, 100%, 20%)`);
+
+                    canvasCtx.fillStyle = gradient;
+                    canvasCtx.fillRect(x, visualizer.height - barHeight, barWidth, barHeight);
+
+                    x += barWidth + 1;
+                }
+            }
+
+            // Draw waveform visualization
+            function drawWaveform(dataArray, bufferLength) {
+                canvasCtx.lineWidth = 3;
+                canvasCtx.strokeStyle = '#fdbb2d';
+                canvasCtx.beginPath();
+
+                const sliceWidth = visualizer.width / bufferLength;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * visualizer.height / 2;
+
+                    if (i === 0) {
+                        canvasCtx.moveTo(x, y);
+                    } else {
+                        canvasCtx.lineTo(x, y);
+                    }
+
+                    x += sliceWidth;
+                }
+
+                canvasCtx.stroke();
+            }
+
+            // Draw circle visualization
+            function drawCircle(dataArray, bufferLength) {
+                const centerX = visualizer.width / 2;
+                const centerY = visualizer.height / 2;
+                const radius = Math.min(centerX, centerY) * 0.6;
+
+                canvasCtx.lineWidth = 2;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const amplitude = dataArray[i] / 256;
+                    const angle = (i / bufferLength) * Math.PI * 2;
+
+                    const x1 = centerX + Math.cos(angle) * radius;
+                    const y1 = centerY + Math.sin(angle) * radius;
+                    const x2 = centerX + Math.cos(angle) * (radius + amplitude * radius);
+                    const y2 = centerY + Math.sin(angle) * (radius + amplitude * radius);
+
+                    // Color based on frequency
+                    const hue = i / bufferLength * 360;
+                    canvasCtx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
+
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(x1, y1);
+                    canvasCtx.lineTo(x2, y2);
+                    canvasCtx.stroke();
+                }
+            }
+
+            // Draw particles visualization (simplified)
+            function drawParticles(dataArray, bufferLength) {
+                const particleCount = 100;
+                const centerX = visualizer.width / 2;
+                const centerY = visualizer.height / 2;
+
+                for (let i = 0; i < particleCount; i++) {
+                    const amplitude = dataArray[i % bufferLength] / 256;
+                    const angle = (i / particleCount) * Math.PI * 2;
+                    const distance = amplitude * Math.min(centerX, centerY) * 0.8;
+
+                    const x = centerX + Math.cos(angle) * distance;
+                    const y = centerY + Math.sin(angle) * distance;
+                    const size = 2 + amplitude * 8;
+
+                    // Color based on frequency
+                    const hue = i / particleCount * 360;
+                    canvasCtx.fillStyle = `hsla(${hue}, 100%, 60%, ${0.5 + amplitude * 0.5})`;
+
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(x, y, size, 0, Math.PI * 2);
+                    canvasCtx.fill();
+                }
+            }
+
+            // Event listeners
+            audioElement.addEventListener('play', () => {
+                if (!audioContext) {
+                    initAudio();
+                } else if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                isPlaying = true;
+            });
+
+            audioElement.addEventListener('pause', () => {
+                isPlaying = false;
+            });
+
+            // Tempo control
+            tempoControl.addEventListener('input', () => {
+                audioElement.playbackRate = tempoControl.value;
+                audioElement.preservesPitch = true;
+                tempoValue.textContent = tempoControl.value + 'x';
+            });
+
+            // Pitch control
+            pitchControl.addEventListener('input', () => {
+                soundTouch.parameters.get('pitch').value = pitchControl.value;
+                pitchValue.textContent = pitchControl.value + 'x';
+            });
+
+            // Volume control
+            volumeControl.addEventListener('input', () => {
+                if (gainNode) {
+                    gainNode.gain.value = parseFloat(volumeControl.value);
+                }
+                volumeValue.textContent = volumeControl.value;
+            });
+
+            // Bass control
+            bassControl.addEventListener('input', () => {
+                if (bassBoost) {
+                    bassBoost.gain.setValueAtTime(
+                        parseFloat(bassControl.value) * 10,
+                        audioContext.currentTime
+                    );
+                }
+                bassValue.textContent = bassControl.value;
+            });
+
+            // Visualization mode buttons
+            visButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    visButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    visualizationMode = btn.dataset.mode;
+                    visModeElement.textContent = btn.textContent;
+                });
+            });
+
+            // Fullscreen button
+            fullscreenBtn.addEventListener('click', () => {
+                if (!isFullscreen) {
+                    visualizer.style.height = '550px';
+                    visualizerBox.style.height = '550px';
+                    fullscreenBtn.textContent = 'Exit Fullscreen Visualizer';
+                } else {
+                    visualizer.style.height = '300px';
+                    visualizerBox.style.height = '300px';
+                    fullscreenBtn.textContent = 'Enter Fullscreen Visualizer';
+                }
+                isFullscreen = !isFullscreen;
+                resizeCanvas();
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+            });
+        }
+    </script>
+</body>
+</html>
+@code {
+    [Parameter]
+    public int SetHashCode { get; set; }
+    private AudioFile? _audioFile;
+
+    protected override Task OnInitializedAsync()
+    {
+        _audioFile = (AudioFile)StateContainer.ObjectTunnel[SetHashCode];
+        return base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initApp");
+    }
+}

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Newtonsoft.Json.Converters;
-using SoundChangerBlazorServer.Data;
+using SoundChangerBlazorServer.Services;
 
 namespace SoundChangerBlazorServer.Pages
 {

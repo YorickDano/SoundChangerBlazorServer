@@ -1,35 +1,47 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>enable</ImplicitUsings> 
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="FFMediaToolkit" Version="4.5.0" />
-    <PackageReference Include="Google.Apis" Version="1.63.0" />
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.63.0.3205" />
+    <PackageReference Include="Google.Apis" Version="1.70.0" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.70.0.3847" />
     <PackageReference Include="IgniteUI.Blazor.Trial" Version="23.1.37" />
-    <PackageReference Include="MediaToolkit" Version="1.0.2" />
-    <PackageReference Include="RestSharp" Version="110.2.0" />
+    <PackageReference Include="RestSharp" Version="112.1.0" />
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="SoundTouch.Net.NAudioSupport" Version="2.3.2" />
+    <PackageReference Include="SpotifyAPI.Web" Version="7.2.1" />
+    <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.2.1" />
     <PackageReference Include="Syncfusion.Blazor.Spinner" Version="22.1.39" />
-    <PackageReference Include="VideoLibrary" Version="3.2.3" />
-    <PackageReference Include="YoutubeExplode" Version="6.2.17" />
+    <PackageReference Include="VideoLibrary" Version="3.2.9" />
+    <PackageReference Include="YoutubeDLSharp" Version="1.1.2" />
+    <PackageReference Include="YoutubeExplode" Version="6.5.4" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Update="appsettings.Development.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Update="appsettings.json">
+    <Content Update="wwwroot\css\site.css">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\css\spotifyStyle.css">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    <Content Update="wwwroot\js\audioInterop.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Update="wwwroot\js\scripts.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\js\soundtouch-worklet.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\js\soundtouch.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+	  
   </ItemGroup>
 
 </Project>

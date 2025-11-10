@@ -1,4 +1,6 @@
-﻿namespace SoundChangerBlazorServer.Models
+﻿using Microsoft.AspNetCore.Components.Forms;
+
+namespace SoundChangerBlazorServer.Models
 {
     public class AudioFile
     {
@@ -37,5 +39,15 @@
             anotherAf.WWWRootPath = new string(this.WWWRootPath);
             anotherAf.Title = new string(this.Title);
         }
-    }
+
+        public static AudioFile Init(InputFileChangeEventArgs e) => 
+            new AudioFile()
+            {
+                FileName = Path.GetFileNameWithoutExtension(e.File.Name),
+                Title = Path.GetFileNameWithoutExtension(e.File.Name),
+                Extension = Path.GetExtension(e.File.Name),
+                Format = e.File.ContentType,
+            };
+        }
+    
 }

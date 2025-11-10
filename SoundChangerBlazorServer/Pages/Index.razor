@@ -1,54 +1,61 @@
 ﻿@page "/"
 @page "/home"
 @using SoundChangerBlazorServer.Models.YoutubeModels;
+@using SoundChangerBlazorServer.Services;
+@using SoundChangerBlazorServer.Services.Interfaces;
 
 @inject IJSRuntime JSRuntime;
-@inject AudioService AudioService;
+@inject IAudioService AudioService;
 @inject SpotifyClient SpotifyClient;
 @inject NavigationManager NavigationManager
-@inject YoutubeDownloader YoutubeDownloader;
+@inject IYoutubeDownloader YoutubeDownloader;
 @inject IWebHostEnvironment WebHostEnv;
+@inject StateContainer StateContainer;
 
 <PageTitle>Index</PageTitle>
+
+<script src="js/scripts.js"></script>
 
 <div class="container">
     <div class="main-content">
         <div class="top-section">
-            @if (IsAlertMessage)
+            @if (_pData.IsAlertMessage)
             {
                 <div class="alert alert-danger alert-dismissible fade show" role="alert" style="font-size: 20px;font-weight:600;">
                     <strong>Fail</strong>
-                    @AlertMessage
+                    @_pData.AlertMessage
                     <button @onclick="CloseAlert" id="alert" type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
-            <label class="file-input">
-                <InputFile class="file-input" OnChange="@FileInput" />
-                File input
-            </label>
-            <br />
-            <div>OR</div>
+            <div class="file-input-container">
+                <label class="file-input-label grid-center">
+                    <span class="file-input-text">Choose file or drag & drop here</span>
+                    <InputFile class="file-input" OnChange="@FileInput" />
+                </label>
+            </div>
+
+            <div class="or-separator">OR</div>
+
             <div id="youtubePartial">
-                <br />
                 <div>Search in youtube</div>
                 <input placeholder="Enter url or title"
-                @bind-value="@YoutubeSearch"
+                @bind-value="@_pData.YoutubeSearch"
                 @bind-value:event="oninput" type="text" />
                 <select name="number"
-                @bind-value="@YoutubeSearchType"
+                @bind-value="@_pData.YoutubeSearchType"
                 @bind-value:event="oninput">
                     <option value="video">Video</option>
                     <option value="playlist">Playlist</option>
                 </select>
                 <button @onclick="SearchYoutube" class="btn btn-primary">Search</button>
             </div>
-            <br />
-            <div>OR</div>
-            <br />
+
+            <div class="or-separator">OR</div>
+
             @if (!SpotifyClient.IsAuthorized)
             {
                 <div id="SpotifyAut">
-                    <button @onclick="SpotifyConnect" class="btn btn-primary-green">Authorize Spotify</button>
+                    <button @onclick="SpotifyConnect" class="btn btn-primary">Authorize Spotify</button>
                 </div>
             }
             @if (SpotifyClient.IsAuthorized)
@@ -56,10 +63,10 @@
                 <div id="spotifyPartial">
                     <div>Search in spotify</div>
                     <input placeholder="Enter title"
-                    @bind-value="@SpotifySearch"
+                    @bind-value="@_pData.SpotifySearch"
                     @bind-value:event="oninput" type="text" />
                     <select name="number"
-                    @bind-value="@SpotifySearchType"
+                    @bind-value="@_pData.SpotifySearchType"
                     @bind-value:event="oninput">
                         <option value="track">Track</option>
                         <option value="playlist">Playlist</option>
@@ -68,16 +75,16 @@
                 </div>
             }
             <br />
-            @if (Videos != null)
+            @if (_pData.Videos != null)
             {
-                <button class="btn btn-primary" @onclick="() => VideosHide = !VideosHide">@(VideosHide ? "Show videos" : "Hide videos")</button>
+                <button class="btn btn-primary" @onclick="() => _pData.VideosHide = !_pData.VideosHide">@(_pData.VideosHide ? "Show videos" : "Hide videos")</button>
             }
-            @if (Videos != null && !VideosHide)
+            @if (_pData.Videos != null && !_pData.VideosHide)
             {
                 <br />
-                for (var i = 0; i < Videos.Count(); ++i)
+                for (var i = 0; i < _pData.Videos.Count(); ++i)
                 {
-                    var video = Videos.ElementAt(i);
+                    var video = _pData.Videos.ElementAt(i);
                     <div class="track-card">
                         <a href="@video.Url" class="text-decoration-none" target="_blank">
                             <img class="imgTrackCard" src="@video.ImgUrl">
@@ -91,23 +98,23 @@
             }
             <br />
 
-            @if (Tracks != null)
+            @if (_pData.Tracks != null)
             {
-                <button class="btn btn-primary" @onclick="() => TracksHide = !TracksHide">@(TracksHide ? "Show tracks" : "Hide tracks")</button>
+                <button class="btn btn-primary" @onclick="() => _pData.TracksHide = !_pData.TracksHide">@(_pData.TracksHide ? "Show tracks" : "Hide tracks")</button>
             }
-            @if (Tracks != null && !TracksHide)
+            @if (_pData.Tracks != null && !_pData.TracksHide)
             {
                 <br />
-                for (var i = 0; i < Tracks.Count(); ++i)
+                for (var i = 0; i < _pData.Tracks.Count(); ++i)
                 {
 
-                    var title = Tracks.ElementAt(i).Title;
-                    var author = Tracks.ElementAt(i).Author;
+                    var title = _pData.Tracks.ElementAt(i).Title;
+                    var author = _pData.Tracks.ElementAt(i).Author;
                     var combine = title + " " + author;
 
                     <div class="track-card">
                         <a class="text-decoration-none">
-                            <img class="imgTrackCard" src="@Tracks.ElementAt(i).ImgUrl">
+                            <img class="imgTrackCard" src="@_pData.Tracks.ElementAt(i).ImgUrl">
                             <div class="track-card-text">@(title + '\n' + author)</div>
                         </a>
 
@@ -117,26 +124,27 @@
                 }
             }
 
-            @if (Loading)
+            @if (_pData.Loading)
             {
                 <div class="spinnerBg">
                     <div class="spinner"></div>
                 </div>
             }
         </div>
-        @if (_audioFiles != null)
+        @if (_pData._audioFiles != null)
         {
             <div class="previousFiles">
-                @if (_audioFiles != null && _audioFiles.Any())
+                @if (_pData._audioFiles != null && _pData._audioFiles.Any())
                 {
-                    <button class="btn btn-primary" @onclick="() => ViewPreviousFiles = !ViewPreviousFiles">Click to view/hide previous files</button>
+                    <button class="btn btn-primary" @onclick="() => _pData.ViewPreviousFiles = !_pData.ViewPreviousFiles">Click to view/hide previous files</button>
                 }
-                @if (ViewPreviousFiles)
+                @if (_pData.ViewPreviousFiles)
                 {
                     <br />
                     <div>Previous Files:</div>
-                    @foreach (var file in _audioFiles)
-                    {       
+                    @foreach (var file in _pData._audioFiles)
+                    {
+                        var fileId = file.Id;
                         <div id="audioParent">
                             @file.Title
                             <br />
@@ -147,16 +155,24 @@
                                 Rate: @file.Rate
                             </div>
                         </div>
-                        <button class="btn btn-primary" @onclick="() => ReturnTo(file.Id)">Return to this file</button>
+                        <button class="btn btn-primary" @onclick="() => ReturnTo(fileId)">Return to this file</button>
                         <br />
+                    }
+                    @if (_pData._audioFiles != null && _pData._audioFiles.Any())
+                    {
+                        <button class="btn btn-primary" @onclick="() => _pData.ViewPreviousFiles = !_pData.ViewPreviousFiles">Click to view/hide previous files</button>
                     }
                 }
             </div>
         }
-        @if (_audioFile.Created)
+        @if (_pData._audioFile.Created)
         {
             <div class="bottom-section">
                 <div class="audio-controls">
+                    <input placeholder="Enter seconds"
+                           @bind-value="@_pData.MixSeconds"
+                           @bind-value:event="oninput" type="number" />
+                    <button class="btn btn-primary" @onclick="MixTrack">Mix</button>
                     <button class="btn btn-danger" @onclick="DeleteAll">Delete All</button>
                     <div>
                         Return to previous file
@@ -168,110 +184,139 @@
                     <span>Tempo</span>
                     <IgbSlider Change=OnChangeTempo Max="2"
                                Min="0"
-                               Value="_settings.Tempo"
+                               Value="_pData._settings.Tempo"
                                Step="0.01">
                     </IgbSlider>
                     <div class="value-container">
-                        <span class="slider-label">Tempo: @_settings.Tempo</span>
+                        <span class="slider-label">Tempo: @_pData._settings.Tempo</span>
                     </div>
                     <span>Pitch</span>
                     <IgbSlider Change=OnChangePitch Max="2"
                                Min="0"
-                               Value="_settings.Pitch"
+                               Value="_pData._settings.Pitch"
                                Step="0.01">
                     </IgbSlider>
                     <div class="value-container">
-                        <span class="slider-label">Pitch: @_settings.Pitch</span>
+                        <span class="slider-label">Pitch: @_pData._settings.Pitch</span>
                     </div>
                     <span>Rate</span>
                     <IgbSlider Change=OnChangeRate Max="2"
                                Min="0"
-                               Value="_settings.Rate"
+                               Value="_pData._settings.Rate"
                                Step="0.01">
                     </IgbSlider>
                     <div class="value-container">
-                        <span class="slider-label">Rate: @_settings.Rate</span>
+                        <span class="slider-label">Rate: @_pData._settings.Rate</span>
                     </div>
                 </div>
-                <br />
-
-                <button class="btn btn-primary" @onclick="ChangeSound">Change</button>
+                <button class="btn btn-primary w-100" @onclick="ChangeSound">Change</button>
             </div>
         }
 
     </div>
 </div>
 
-@if (_audioFile.Created)
+@if (_pData._audioFile.Created)
 {
     <div id="audioParent" class="sticky-bottom">
-        @_audioFile.Title
+        @_pData._audioFile.Title
         <br />
-        <audio id="audioPlayer" controls src="\@_audioFile.AudioPath"></audio>
+        <audio id="audioPlayer" controls src="\@_pData._audioFile.AudioPath" ></audio>
         <div>
-            Tempo: @_audioFile.Tempo
-            Pitch: @_audioFile.Pitch
-            Rate: @_audioFile.Rate
+            Tempo: @_pData._audioFile.Tempo
+            Pitch: @_pData._audioFile.Pitch
+            Rate: @_pData._audioFile.Rate
         </div>
+        <input class="btn btn-primary w-100" @onclick="MoveToVisualisation" value="Visualisation" />
     </div>
 }
 
 <script>
-    function UpdateSpotify() {
-        var el = document.getElementById('spotifyPartial');
-        var autB = document.getElementById('SpotifyAut');
-        autB.style.display = 'none';
-        el.style.display = 'block';
-    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const fileInput = document.querySelector('.file-input-container');
+
+        if (fileInput) {
+            // Drag and drop events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                fileInput.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                fileInput.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                fileInput.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight() {
+                fileInput.classList.add('drag-over');
+            }
+
+            function unhighlight() {
+                fileInput.classList.remove('drag-over');
+            }
+
+            fileInput.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    // Trigger change event
+                    const event = new Event('change', { bubbles: true });
+                    fileInput.dispatchEvent(event);
+                }
+            }
+        }
+    });
 </script>
+
 @code
 {
-    private bool IsAlertMessage = false;
-    private string AlertMessage;
+    private PageData _pData  = new PageData();
 
-    private async Task CloseAlert()
+    private void CloseAlert()
     {
-        IsAlertMessage = false;
+        _pData.IsAlertMessage = false;
     }
-    private async Task ConvertToMp3()
-    {
-        await AudioService.ConvertCurrentToMp3();
-    }
+
     private async Task ModifyVideo(string id)
     {
-        Loading = true;
-        var res = await AudioService.LoadFromYoutube(id);
+        _pData.Loading = true;
+        var res = await AudioService.LoadAudio(id);
 
         if (!res)
         {
-            AlertMessage = "Something break or track is too long (max 10 min)";
-            IsAlertMessage = true;
-            Loading = false;
+            _pData.AlertMessage = "Something break or track is too long (max 10 min)";
+            _pData.IsAlertMessage = true;
+            _pData.Loading = false;
             return;
         }
-        _audioFile = await AudioService.GetCurrentFile();
-        _audioFiles = await AudioService.GetList();
-        Loading = false;
-        StateHasChanged();
+        await UpdateData();
     }
+
     private async Task ModifyTrack(string title)
     {
-        Loading = true;
-        var videoId = await YoutubeDownloader.GetVideoIdByTitleAsync(title);
-        var res = await AudioService.LoadFromYoutube($"https://www.youtube.com/watch?v={videoId}");
+        _pData.Loading = true;
+        var videoId = _pData.Videos!.First(f => f.Title == title).Id;
+        var res = await AudioService.LoadAudio(videoId);
 
         if (!res)
         {
-            AlertMessage = "Something break or track is too long (max 10 min)";
-            IsAlertMessage = true;
-            Loading = false;
+            _pData.AlertMessage = "Something break or track is too long (max 10 min)";
+            _pData.IsAlertMessage = true;
+            _pData.Loading = false;
             return;
         }
 
-        _audioFile = await AudioService.GetCurrentFile();
-        _audioFiles = await AudioService.GetList();
-        Loading = false;
-        StateHasChanged();
+        await UpdateData();
     }
 
     private async Task SpotifyConnect()
@@ -279,28 +324,15 @@
         var url = await SpotifyClient.Authorize();
         await JSRuntime.InvokeVoidAsync("open", url, "_blank");
         StateHasChanged();
-        //await JSRuntime.InvokeVoidAsync("UpdateSpotify");
-    }
-
-    IEnumerable<TrackModel> Tracks;
-    IEnumerable<YoutubeVideo> Videos;
-    bool TracksHide = true;
-    bool VideosHide = true;
-
-    public class TrackModel
-    {
-        public string Title { get; set; }
-        public string Author { get; set; }
-        public string ImgUrl { get; set; }
     }
 
     private async Task SearchSpotify()
     {
-        Loading = true;
-        SpotifySearchType ??= "track";
-        var res = await SpotifyClient.SearchFor(SpotifySearch, Enum.Parse<SpotifyTypes>(SpotifySearchType));
+        _pData.Loading = true;
+        _pData.SpotifySearchType ??= "track";
+        var res = await SpotifyClient.SearchFor(_pData.SpotifySearch, Enum.Parse<SpotifyTypes>(_pData.SpotifySearchType));
 
-        switch (SpotifySearchType)
+        switch (_pData.SpotifySearchType)
         {
             case "playlist":
                 {
@@ -310,7 +342,7 @@
                     }
                     var playlistId = res.playlists.items[0].id;
                     var tracks = await SpotifyClient.ConvertPlaylist(playlistId);
-                    Tracks = tracks.Select(x => new TrackModel() { Title = x.track.name, Author = x.track.artists[0].name, ImgUrl = x.track.album.images[1].url });
+                    _pData.Tracks = tracks.Select(x => new Track() { Title = x.track.name, Author = x.track.artists[0].name, ImgUrl = x.track.album.images[1].url });
                     break;
                 }
             case "track":
@@ -322,117 +354,127 @@
 
                     var trackId = res.tracks.items[0].id;
                     var track = await SpotifyClient.ConvertTrack(trackId);
-                    Tracks = new TrackModel[] { new TrackModel() { Title = track.name, Author = track.artists[0].name, ImgUrl = track.album.images[1].url } };
+                    _pData.Tracks = new Track[] { new Track() { Title = track.name, Author = track.artists[0].name, ImgUrl = track.album.images[1].url } };
                     break;
                 }
         }
 
-        TracksHide = false;
-        Loading = false;
-    }
-
-    private async Task ClearTracks()
-    {
-        Tracks = Enumerable.Empty<TrackModel>();
+        _pData.TracksHide = false;
+        _pData.Loading = false;
     }
 
     private async Task ReturnToOrigin()
     {
         await AudioService.ReturnToOrigin();
-        _audioFile = await AudioService.GetCurrentFile();
-        _audioFiles = await AudioService.GetList();
+        await UpdateData();
     }
 
     private async Task ReturnTo(int id)
     {
         await AudioService.ReturnTo(id);
-        _audioFile = await AudioService.GetCurrentFile();
-        _audioFiles = await AudioService.GetList();
+        await UpdateData();
     }
 
     private async Task ReturnToPrevious()
     {
         await AudioService.ReturnToPrevious();
-        _audioFile = await AudioService.GetCurrentFile();
-        _audioFiles = await AudioService.GetList();
+        await UpdateData();
     }
-
-    private string YoutubeSearch;
-    private string YoutubeSearchType = "video";
-
-    private string SpotifySearch;
-    private string SpotifySearchType = "track";
-
-
 
     private async Task SearchYoutube()
     {
-        Loading = true;
-        if (YoutubeSearchType == "video")
+        _pData.Loading = true;
+        if (_pData.YoutubeSearchType == "video")
         {
-            var videos = await YoutubeDownloader.GetVideosAsync(YoutubeSearch);
+            var videos = await YoutubeDownloader.GetVideosAsync(_pData.YoutubeSearch);
 
-            Videos = videos;
+            _pData.Videos = videos;
         }
         else
         {
-            var playlist = await YoutubeDownloader.GetPlaylistAsync(YoutubeSearch);
+            var playlist = await YoutubeDownloader.GetPlaylistAsync(_pData.YoutubeSearch);
 
-            Videos = playlist.Videos;
+            _pData.Videos = playlist.Videos;
         }
-        VideosHide = false;
-        Loading = false;
+        _pData.VideosHide = false;
+        _pData.Loading = false;
     }
-
-    private IEnumerable<AudioFile> _audioFiles;
-    private AudioFile _audioFile = new AudioFile();
-    private SoundTouchSettings _settings = new SoundTouchSettings();
-    private bool Loading = false;
-    private bool ViewPreviousFiles = false;
 
     private async Task FileInput(InputFileChangeEventArgs e)
     {
-        Loading = true;
+        _pData.Loading = true;
         await AudioService.FileInput(e);
-        _audioFile = await AudioService.GetCurrentFile();
-        _audioFiles = await AudioService.GetList();
-        Loading = false;
-        await InvokeAsync(StateHasChanged);
+        await UpdateData();
     }
 
     private async Task ChangeSound()
     {
-        Loading = true;
-        await AudioService.ChangeSound(_settings);
-        _audioFile = await AudioService.GetCurrentFile();
-        _audioFiles = await AudioService.GetList();
-        Loading = false;
-        await InvokeAsync(StateHasChanged);
+        _pData.Loading = true;
+        await AudioService.ChangeSound(_pData._settings);
+        await UpdateData();
+
+    }
+
+    private async Task MixTrack()
+    {
+        _pData.Loading = true;
+        await AudioService.Mix(_pData.MixSeconds);
+        await UpdateData();
     }
 
     private void OnChangeTempo(IgbNumberEventArgs e)
     {
         if (e != null)
         {
-            _settings.Tempo = e.Detail;
+            _pData._settings.Tempo = e.Detail;
         }
     }
+
     private void OnChangePitch(IgbNumberEventArgs e)
     {
         if (e != null)
         {
-            _settings.Pitch = e.Detail;
+            _pData._settings.Pitch = e.Detail;
         }
     }
+
     private void OnChangeRate(IgbNumberEventArgs e)
     {
         if (e != null)
         {
-            _settings.Rate = e.Detail;
+            _pData._settings.Rate = e.Detail;
         }
     }
+
     private async Task DeleteAll()
     {
         await AudioService.DeleteAllAsync();
+    }
+
+    private async Task UpdateData()
+    {
+        _pData._audioFile = await AudioService.GetCurrentFile();
+        _pData._audioFiles = await AudioService.GetList();
+        _pData.Loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task MoveToVisualisation()
+    {
+        var audioFile = await AudioService.GetCurrentFile();
+        var hash = audioFile.GetHashCode();
+        if(!StateContainer.ObjectTunnel.ContainsKey(hash))
+        {
+            StateContainer.ObjectTunnel.Add(hash, audioFile);
+        }
+        await JSRuntime.InvokeVoidAsync("open", $"/visualizer/{hash}", "_blank");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AudioService.Any())
+        {
+            await UpdateData();
+        }
     }
 }

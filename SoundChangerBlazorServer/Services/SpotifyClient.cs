@@ -4,7 +4,7 @@ using RestSharp;
 using SoundChangerBlazorServer.Models.SpotifyModels;
 using System.Text;
 
-namespace SoundChangerBlazorServer.Data
+namespace SoundChangerBlazorServer.Services
 {
     public class SpotifyClient
     {
@@ -16,7 +16,7 @@ namespace SoundChangerBlazorServer.Data
         public bool IsAuthorized { get; private set; } = false;
 
         private string AuthorizeUrl = "https://accounts.spotify.com/";
-        private string RedirectUri = "https://localhost:7240/callback";
+        private string RedirectUri = "https://localhost:7242/callback";
 
         public SpotifyClient(IOptions<SpotifyClientSettings> settings)
         {
@@ -48,6 +48,32 @@ namespace SoundChangerBlazorServer.Data
             var player = JsonConvert.DeserializeObject<SpotifyPlayerResponse.Root>(response.Content);
         }
 
+        public async Task CreatePlaylist(string[] titles)
+        {
+            var tracks = await Task.WhenAll(titles.Select(t => SearchFor(t)));
+
+            var restRequest = new RestRequest($"/v1/users/yao85trdgorucbvx2omz88kah/playlists", Method.Post);
+            var playlistTitle = DateTime.Now.ToString().Replace(":", "-");
+            restRequest.AddJsonBody($@"
+                {{
+                    ""name"": ""{playlistTitle}"",
+                    ""public"": false
+                }}"
+            );
+            var playlistResponse = RestClient.Post(restRequest);
+            var playlist = JsonConvert.DeserializeObject<SpotifyPlaylist.Root>(playlistResponse.Content);
+
+            var addTracksRequest = new RestRequest($"/v1/playlists/{playlist!.id}/tracks", Method.Post);
+            addTracksRequest.AddJsonBody($@"
+                {{
+                    ""uris"": [{string.Join(',', tracks.Where(t => t.tracks != null && t.tracks.items != null
+                                                                                   && t.tracks.items.Count > 0)
+                                                      .Select(t => @"""spotify:track:" + t.tracks.items.First().id + "\""))}]
+                }}");
+            var response = RestClient.Post(addTracksRequest);
+
+        }
+
         public async Task<string> Authorize()
         {
             var restRequest = new RestRequest("authorize?");
@@ -55,7 +81,7 @@ namespace SoundChangerBlazorServer.Data
               "text/html, application/xhtml+xml, application/json, application/xml;q=0.9, image/webp, */*;q=0.8");
             restRequest.AddQueryParameter("response_type", "code");
             restRequest.AddQueryParameter("client_id", Settings.ClientId);
-            restRequest.AddQueryParameter("scope", "user-read-private user-read-email user-read-playback-state user-modify-playback-state");
+            restRequest.AddQueryParameter("scope", "user-read-private user-read-email user-read-playback-state user-modify-playback-state playlist-modify-private");
             restRequest.AddQueryParameter("redirect_uri", RedirectUri);
 
             var response = await AuthorizeClient.GetAsync(restRequest);
@@ -74,7 +100,7 @@ namespace SoundChangerBlazorServer.Data
             var restRequest = new RestRequest("/v1/search", Method.Get);
             restRequest.AddQueryParameter("q", title);
             restRequest.AddQueryParameter("type", type);
-            restRequest.AddQueryParameter("limit", 1);
+            restRequest.AddQueryParameter("limit", 3);
 
             var resp = await RestClient.ExecuteAsync(restRequest);
 
@@ -129,9 +155,9 @@ namespace SoundChangerBlazorServer.Data
 
                 var time = TimeSpan.FromSeconds(Token.expires_in);
 
-                Timer = new Timer((e) => 
-                { 
-                    RefreshToken(); 
+                Timer = new Timer((e) =>
+                {
+                    RefreshToken();
                 }, null, time, time);
                 IsAuthorized = true;
             }
