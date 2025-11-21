@@ -20,6 +20,7 @@ namespace SoundChangerBlazorServer.Services
                 {
                     file.Delete();
                 }
+                File.Delete("Tracks.json");
             });
         }
     }

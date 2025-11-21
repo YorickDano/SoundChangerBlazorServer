@@ -1,4 +1,5 @@
 ﻿@page "/"
+@page "/{VideoId?}"
 @page "/home"
 @using SoundChangerBlazorServer.Models.YoutubeModels;
 @using SoundChangerBlazorServer.Services;
@@ -469,9 +470,17 @@
         }
         await JSRuntime.InvokeVoidAsync("open", $"/visualizer/{hash}", "_blank");
     }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? VideoId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        if(VideoId != null)
+        {
+           await ModifyVideo(VideoId);
+        }
+
         if (AudioService.Any())
         {
             await UpdateData();

@@ -1,0 +1,124 @@
+﻿@page "/youtubemusic"
+@using SoundChangerBlazorServer.Services.Interfaces
+@using SoundChangerBlazorServer.Services.YoutubeServices
+@using System.Text.Json;
+
+@inject IConfiguration _configuration;
+@inject IJSRuntime _jsRuntime;
+@inject YoutubeMusicService _musicService;
+@inject IHttpContextAccessor _httpContextAccessor;
+@inject NavigationManager _navigationManager
+@inject INextPageTokenService _nextPageTokenService
+
+@code {
+    private const string SavedTracksPath = "Tracks.json";
+    public IEnumerable<YoutubeTrack> Tracks = new List<YoutubeTrack>();
+
+    private int CurrentPage = 1;
+    private int ItemsPerPage = 10;
+    private int MaxPages = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_httpContextAccessor.HttpContext!.Session.Keys.Count() == 0 || !_httpContextAccessor.HttpContext!.Session.Keys.Contains("YouTubeAccessToken"))
+        {
+            await _musicService.Authorize();
+        }
+        if (_httpContextAccessor.HttpContext.Session.Keys.Contains("YouTubeAccessToken"))
+        {
+
+            var allTracks = await GetSavedTracksFromFile();
+            if (allTracks.Count() == 0)
+            {
+                Tracks = await GetNewTracks();
+                await SaveTracks(Tracks);
+                return;
+            }
+            Tracks = await GetFormatedTracks(allTracks);
+            MaxPages = (int)Math.Ceiling(allTracks.Count() / 10.0);
+
+        }
+    }
+
+    private async Task NextTracks()
+    {
+        if (CurrentPage == MaxPages)
+        {
+            ++CurrentPage;
+            Tracks = await GetNewTracks();
+            await SaveTracks(Tracks);   
+        }
+        else
+        {
+            ++CurrentPage;
+            Tracks = await GetFormatedTracks(await GetSavedTracksFromFile());
+        }
+    }
+
+    private async Task PreviousTracks()
+    {
+        --CurrentPage;
+        Tracks = await GetFormatedTracks(await GetSavedTracksFromFile());
+    }
+
+    private async Task<IEnumerable<YoutubeTrack>> GetFormatedTracks(IEnumerable<YoutubeTrack> tracks)
+        => tracks.Skip((CurrentPage - 1) * ItemsPerPage)
+                 .Take(10);
+
+    private async Task<IEnumerable<YoutubeTrack>> GetSavedTracksFromFile()
+    {
+        try
+        {
+            IEnumerable<YoutubeTrack> tracks;
+            using (var fs = File.OpenRead(SavedTracksPath))
+            {
+                tracks = await JsonSerializer.DeserializeAsync<IEnumerable<YoutubeTrack>>(fs);
+            }
+
+            return tracks;
+        }
+        catch
+        {
+            return Enumerable.Empty<YoutubeTrack>();
+        }
+    }
+
+    private async Task SaveTracks(IEnumerable<YoutubeTrack> tracks)
+    {
+        await File.WriteAllTextAsync(SavedTracksPath, JsonSerializer.Serialize((await GetSavedTracksFromFile()).Concat(tracks)));
+    }
+
+    private async Task<IEnumerable<YoutubeTrack>> GetNewTracks()
+    {
+        var data = await _musicService.GetRecommendedTracksAsync(_nextPageTokenService.NextPageToken);
+        _nextPageTokenService.FirstNextPageToken ??= data.nextPageToken;
+        _nextPageTokenService.NextPageToken = data.nextPageToken;
+        ++MaxPages;
+        return data.tracks;
+    }
+
+    protected async Task ModifyVideo(string id)
+    {
+        _navigationManager.NavigateTo($"/{id}");
+    }
+}
+
+<h3>YoutubeMusic</h3>
+
+<div>
+    <button @onclick="PreviousTracks" class="btn btn-dark" disabled="@(CurrentPage == 1)">Back</button>
+    <button @onclick="NextTracks" class="btn btn-dark">Next</button>
+    @for (var i = 0; i < Tracks.Count(); ++i)
+    {
+        var video = Tracks.ElementAt(i);
+
+        <div class="track-card">
+            <a href="https://www.youtube.com/watch?v=@video.Id" class="text-decoration-none">
+                <img class="imgTrackCard" src="@video.ThumbnailUrl">
+                <div class="track-card-text">@(video.Title + " " + video.ChannelTitle)</div>
+            </a>
+            <button @onclick="() => ModifyVideo(video.Id)" class="btn modifyButton">Modify</button>
+        </div>
+
+    }
+</div>

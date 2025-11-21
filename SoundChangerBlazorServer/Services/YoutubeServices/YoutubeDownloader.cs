@@ -10,7 +10,7 @@ using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Videos;
 
-namespace SoundChangerBlazorServer.Services
+namespace SoundChangerBlazorServer.Services.YoutubeServices
 {
     public class YoutubeDownloader : IYoutubeDownloader
     {
@@ -18,7 +18,6 @@ namespace SoundChangerBlazorServer.Services
         private readonly YouTubeService _youTubeService;
         private readonly HttpClient _httpClient;
         private readonly YoutubeDL _youtubeDL;
-        private readonly IWebHostEnvironment _hostingEnvironment;
 
         private readonly string BaseVideoUrl;
         private readonly string BasePlaylistUrl;
@@ -32,10 +31,9 @@ namespace SoundChangerBlazorServer.Services
             {
                 ApiKey = youtubeOptions.Value.ApiKey
             });
-            _hostingEnvironment = hostEnvironment;
             BaseVideoUrl = youtubeDownloadSettings.Value.BaseVideoUrl;
             BasePlaylistUrl = youtubeDownloadSettings.Value.BasePlaylistUrl;
-            WebRootPath = _hostingEnvironment.WebRootPath;
+            WebRootPath = hostEnvironment.WebRootPath;
             _youtubeDL = new YoutubeDL();
             _youtubeDL.YoutubeDLPath = WebRootPath + "\\yt-dlp.exe";
             _youtubeDL.FFmpegPath = WebRootPath + "\\ffmpeg.exe";
@@ -78,6 +76,7 @@ namespace SoundChangerBlazorServer.Services
             youtubeVideo.Url = video.Url;
             youtubeVideo.Title = video.Title;
             youtubeVideo.ImgUrl = video.Thumbnails[3].Url;
+            youtubeVideo.ChannelTitle = video.Author.ChannelTitle;
 
             return youtubeVideo;
         }
@@ -106,6 +105,6 @@ namespace SoundChangerBlazorServer.Services
             searchRequest.MaxResults = 5;
 
             return searchRequest;
-        }      
+        }
     }
 }
