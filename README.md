@@ -2,7 +2,7 @@
 
 A powerful web-based audio processing and visualization application built with Blazor Server. This application allows users to manipulate audio files in real-time with various effects and visualize audio with immersive visualizations.
 
-![Application Screenshot](Screenshots/main-interface.png)
+![Application Screenshot](Screenshots/Main page.png)
 
 ## 🎯 Features
 
@@ -37,19 +37,19 @@ A powerful web-based audio processing and visualization application built with B
 ## 📸 Application Screenshots
 
 ### Main Interface
-![Main Interface](Screenshots/2025-11-24_143128.png)
+![Main Interface](Screenshots/Main page.png)
 *Main application interface with file upload and music search functionality*
 
 ### YouTube Music Integration
-![YouTube Music](Screenshots/2025-11-24_143323.png)
+![YouTube Music](Screenshots/Yotube connection.png)
 *YouTube Music integration showing track listing and processing options*
 
 ### Audio Effects Control
-![Effects Control](Screenshots/2025-11-24_143626.png)
+![Effects Control](Screenshots/Track changing.png)
 *Real-time audio effects control panel with tempo, pitch, and routing options*
 
 ### Advanced Visualizer
-![Audio Visualizer](Screenshots/2025-11-24_143655.png)
+![Audio Visualizer](Track visualization.png)
 *Immersive audio visualizer with customizable display settings*
 
 ## 🚀 Getting Started
