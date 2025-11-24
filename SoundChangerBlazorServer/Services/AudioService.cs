@@ -96,7 +96,7 @@ namespace SoundChangerBlazorServer.Services
         {
             var fileInfo = await YoutubeDownloader.Download(youtubeLink);
 
-            if (string.IsNullOrEmpty(fileInfo.Item1))
+            if (string.IsNullOrEmpty(fileInfo.Name))
             {
                 return false;
             }
@@ -104,25 +104,20 @@ namespace SoundChangerBlazorServer.Services
             var audioFile = new AudioFile()
             {
                 Id = _audioFiles.Count,
-                FileName = Path.GetFileNameWithoutExtension(fileInfo.Item1),
-                Title = Path.GetFileNameWithoutExtension(fileInfo.Item1),
+                FileName = Path.GetFileNameWithoutExtension(fileInfo.Name),
+                Title = Path.GetFileNameWithoutExtension(fileInfo.Name),
                 Extension = ".wav",
                 Format = "WAVE",
                 WWWRootPath = _hostingEnvironment.WebRootPath,
             };
             audioFile.FileName += _audioFiles.Count;
-            var fileCreation = File.Create(audioFile.FilePath);
-            fileCreation.Close();
 
-            using (var video = new MediaFoundationReader(fileInfo.Item2))
-            {
-                WaveFileWriter.CreateWaveFile(audioFile.FilePath, video);
-            }
+            File.Move(fileInfo.Path, audioFile.FilePath);
 
             audioFile.Created = true;
             _audioFiles.Add(audioFile);
             _audioFile = _audioFiles[^1];
-            File.Delete(fileInfo.Item2);
+            File.Delete(fileInfo.Path);
 
             return true;
         }

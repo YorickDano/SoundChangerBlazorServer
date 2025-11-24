@@ -2,6 +2,6 @@
 {
     public interface IDownloader
     {
-        Task<(string, string)> Download(string videoId);
+        Task<(string Name, string Path)> Download(string videoId);
     }
 }
