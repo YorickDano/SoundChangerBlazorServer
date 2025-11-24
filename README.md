@@ -1,20 +1,68 @@
 # SoundChangerBlazorServer
 
-This web-application is made on Blazor for changing your tracks.
+A powerful web-based audio processing and visualization application built with Blazor Server. This application allows users to manipulate audio files in real-time with various effects and visualize audio with immersive visualizations.
 
-To change tracks you need to load them by 1 of 3 approaches by loading from pc, from youtube link or from spotify (to use spotify you need to login in your spotify account)
+![Application Screenshot](Screenshots/main-interface.png)
 
-When you load your track you may change Tempo, Pitch or Rate of the track by using sliders like on image below
+## 🎯 Features
 
-![image](https://github.com/YorickDano/SoundChangerBlazorServer/assets/70775008/455e24ea-33e9-429a-801f-bfda6a0f3bc5)
+### Audio Processing
+- **Real-time Audio Effects**: Adjust tempo, pitch, and volume of audio files
+- **Multiple Effect Controls**: 
+  - Tempo modification (speed up/slow down)
+  - Pitch shifting
+  - Volume normalization
+  - Audio routing options
 
-After you change settings and pressed "Change" button track at the bottom will change
+### Audio Visualization
+- **Immersive Visualizer**: Large-scale audio waveform visualization
+- **Multiple Visualization Modes**:
+  - Waveform display
+  - Particle effects
+  - Click-based visualization
+- **Customizable Visual Settings**: Adjust size, intensity, and visualization parameters
 
-![image](https://github.com/YorickDano/SoundChangerBlazorServer/assets/70775008/68b4a6b2-c34f-4bb6-93ca-c3bf734f6ed5)
+### Music Integration
+- **YouTube Music Support**: Search and process audio from YouTube Music
+- **Spotify Authorization**: Integration with Spotify for music access
+- **URL Processing**: Import audio by entering video URLs or titles
 
-If you want to return to original track or to previos, or you want to see history of you changes, you may use this buttons
+## 🛠️ Technology Stack
 
-![image](https://github.com/YorickDano/SoundChangerBlazorServer/assets/70775008/8b89cdbe-a414-4c23-8c3e-80c7862c947f)
+- **Frontend**: Blazor Server, C#, HTML5, CSS3
+- **Audio Processing**: Custom audio manipulation libraries
+- **Visualization**: Canvas-based rendering for real-time audio visualization
+- **External APIs**: YouTube Music API, Spotify Web API
 
-![image](https://github.com/YorickDano/SoundChangerBlazorServer/assets/70775008/00304386-0893-4ee6-901f-0a03795d8ede)
+## 📸 Application Screenshots
 
+### Main Interface
+![Main Interface](Screenshots/2025-11-24_143128.png)
+*Main application interface with file upload and music search functionality*
+
+### YouTube Music Integration
+![YouTube Music](Screenshots/2025-11-24_143323.png)
+*YouTube Music integration showing track listing and processing options*
+
+### Audio Effects Control
+![Effects Control](Screenshots/2025-11-24_143626.png)
+*Real-time audio effects control panel with tempo, pitch, and routing options*
+
+### Advanced Visualizer
+![Audio Visualizer](Screenshots/2025-11-24_143655.png)
+*Immersive audio visualizer with customizable display settings*
+
+## 🚀 Getting Started
+
+### Prerequisites
+- .NET 6.0 SDK or later
+- Web browser with Web Audio API support
+- (Optional) YouTube Data API key for YouTube Music features
+- (Optional) Spotify Developer credentials for Spotify integration
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/YorickDano/SoundChangerBlazorServer.git
+   cd SoundChangerBlazorServer
