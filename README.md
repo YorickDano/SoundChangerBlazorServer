@@ -47,7 +47,7 @@ A powerful web-based audio processing and visualization application built with B
 *Real-time audio effects control panel with tempo, pitch, and routing options*
 
 ### Advanced Visualizer
-![Audio Visualizer](TrackVisualization.png)
+![Audio Visualizer](Screenshots/TrackVisualization.png)
 *Immersive audio visualizer with customizable display settings*
 
 ## 🚀 Getting Started
