@@ -3,30 +3,22 @@ using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.Options;
 using SoundChangerBlazorServer.Models.YoutubeModels;
 using SoundChangerBlazorServer.Services.Interfaces;
-using System.IO;
-using System.Net;
 using YoutubeDLSharp;
-using YoutubeExplode;
-using YoutubeExplode.Common;
-using YoutubeExplode.Videos;
 
 namespace SoundChangerBlazorServer.Services.YoutubeServices
 {
     public class YoutubeDownloader : IYoutubeDownloader
     {
-        private readonly YoutubeClient _youtubeClient;
         private readonly YouTubeService _youTubeService;
-        private readonly HttpClient _httpClient;
         private readonly YoutubeDL _youtubeDL;
 
         private readonly string BaseVideoUrl;
         private readonly string BasePlaylistUrl;
         private readonly string WebRootPath;
+
         public YoutubeDownloader(IOptions<YoutubeApiSettings> youtubeOptions, IWebHostEnvironment hostEnvironment,
                                  IOptions<YoutubeDownloaderSettings> youtubeDownloadSettings, IHttpClientFactory clientFactory)
         {
-            _httpClient = clientFactory.CreateClient(nameof(YoutubeClient));
-            _youtubeClient = new YoutubeClient(_httpClient);
             _youTubeService = new YouTubeService(new BaseClientService.Initializer()
             {
                 ApiKey = youtubeOptions.Value.ApiKey
@@ -35,20 +27,42 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
             BasePlaylistUrl = youtubeDownloadSettings.Value.BasePlaylistUrl;
             WebRootPath = hostEnvironment.WebRootPath;
             _youtubeDL = new YoutubeDL();
-            _youtubeDL.YoutubeDLPath = WebRootPath + "\\yt-dlp.exe";
-            _youtubeDL.FFmpegPath = WebRootPath + "\\ffmpeg.exe";
+            _youtubeDL.YoutubeDLPath = Path.Combine(WebRootPath, "yt-dlp.exe");
+            _youtubeDL.FFmpegPath = Path.Combine(WebRootPath, "ffmpeg.exe");
             _youtubeDL.OutputFolder = WebRootPath;
         }
 
-        public async Task<(string, string)> Download(string videoId)
+        public async Task<(YoutubeVideo?, string)> Download(string videoId)
         {
             var result = await _youtubeDL.RunAudioDownload(BaseVideoUrl + videoId, YoutubeDLSharp.Options.AudioConversionFormat.Wav);
             var directoryInfo = new DirectoryInfo(WebRootPath);
-            var file = directoryInfo.GetFiles().FirstOrDefault(f => f.Name.Contains(videoId));
+            var file = directoryInfo.GetFiles()
+                                    .FirstOrDefault(f => f.Name.Contains(videoId));
 
-            var fileName = Path.GetFileName(result.Data);
+            if (file == null)
+            {
+                return (null, string.Empty);
+            }
 
-            return (Path.GetFileNameWithoutExtension(file!.Name), file!.FullName);
+            var video = await GetVideo(videoId);
+
+            return (video, file!.FullName);
+        }
+
+        public async Task<YoutubeVideo> GetVideo(string id)
+        {
+            var search = _youTubeService.Videos.List("snippet");
+            search.Id = id;
+            var res = await search.ExecuteAsync();
+
+            return new YoutubeVideo()
+            {
+                Title = res.Items[0].Snippet.Title,
+                Url = BaseVideoUrl + res.Items[0].Id,
+                ImgUrl = res.Items[0].Snippet.Thumbnails.Medium.Url,
+                Id = res.Items[0].Id,
+                ChannelTitle = res.Items[0].Snippet.ChannelTitle
+            };
         }
 
         public async Task<IEnumerable<YoutubeVideo>> GetVideosAsync(string query)
@@ -66,19 +80,6 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
                 ImgUrl = x.Snippet.Thumbnails.Medium.Url,
                 Id = x.Id.VideoId
             });
-        }
-
-        public async Task<YoutubeVideo> GetVideoAsync(string query)
-        {
-            var youtubeVideo = new YoutubeVideo();
-            var video = (IVideo)(query.Contains(BaseVideoUrl) ? await _youtubeClient.Videos.GetAsync(query) : (await _youtubeClient.Search.GetVideosAsync(query)).First());
-            youtubeVideo.Id = video.Id;
-            youtubeVideo.Url = video.Url;
-            youtubeVideo.Title = video.Title;
-            youtubeVideo.ImgUrl = video.Thumbnails[3].Url;
-            youtubeVideo.ChannelTitle = video.Author.ChannelTitle;
-
-            return youtubeVideo;
         }
 
         public async Task<YoutubePlaylist> GetPlaylistAsync(string query)

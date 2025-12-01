@@ -12,7 +12,9 @@
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.70.0.3847" />
 	<PackageReference Include="Google.Apis.Auth" Version="1.70.0" />
 	<PackageReference Include="Google.Apis.Auth.AspNetCore3" Version="1.70.0" />
+	<PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
     <PackageReference Include="IgniteUI.Blazor.Trial" Version="23.1.37" />
+    <PackageReference Include="NAudio" Version="1.9.0" />
     <PackageReference Include="RestSharp" Version="112.1.0" />
     <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="SoundTouch.Net.NAudioSupport" Version="2.3.2" />

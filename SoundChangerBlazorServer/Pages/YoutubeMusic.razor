@@ -2,9 +2,8 @@
 @using SoundChangerBlazorServer.Services.Interfaces
 @using SoundChangerBlazorServer.Services.YoutubeServices
 @using System.Text.Json;
+@using System.Text
 
-@inject IConfiguration _configuration;
-@inject IJSRuntime _jsRuntime;
 @inject YoutubeMusicService _musicService;
 @inject IHttpContextAccessor _httpContextAccessor;
 @inject NavigationManager _navigationManager
@@ -31,6 +30,10 @@
             if (allTracks.Count() == 0)
             {
                 Tracks = await GetNewTracks();
+                while (Tracks.Count() < 10)
+                {
+                    Tracks = Tracks.Concat(await GetNewTracks());
+                }
                 await SaveTracks(Tracks);
                 return;
             }
@@ -45,8 +48,13 @@
         if (CurrentPage == MaxPages)
         {
             ++CurrentPage;
+            ++MaxPages;
             Tracks = await GetNewTracks();
-            await SaveTracks(Tracks);   
+            while (Tracks.Count() < 10)
+            {
+                Tracks = Tracks.Concat(await GetNewTracks());
+            }
+            await SaveTracks(Tracks);
         }
         else
         {
@@ -72,7 +80,7 @@
             IEnumerable<YoutubeTrack> tracks;
             using (var fs = File.OpenRead(SavedTracksPath))
             {
-                tracks = await JsonSerializer.DeserializeAsync<IEnumerable<YoutubeTrack>>(fs);
+                tracks = await JsonSerializer.DeserializeAsync<IEnumerable<YoutubeTrack>>(fs) ?? Enumerable.Empty<YoutubeTrack>();
             }
 
             return tracks;
@@ -90,16 +98,33 @@
 
     private async Task<IEnumerable<YoutubeTrack>> GetNewTracks()
     {
-        var data = await _musicService.GetRecommendedTracksAsync(_nextPageTokenService.NextPageToken);
+        var data = await _musicService.GetLikedTracksAsync(_nextPageTokenService.NextPageToken);
         _nextPageTokenService.FirstNextPageToken ??= data.nextPageToken;
         _nextPageTokenService.NextPageToken = data.nextPageToken;
-        ++MaxPages;
         return data.tracks;
     }
 
-    protected async Task ModifyVideo(string id)
+    protected async Task ModifyVideo(string id, string imgUrl)
     {
-        _navigationManager.NavigateTo($"/{id}");
+        _navigationManager.NavigateTo($"/{id}/{Uri.EscapeDataString(imgUrl)}");
+    }
+
+    private async Task SearchFor(ChangeEventArgs e)
+    {
+        var q = e.Value?.ToString();
+        var allTracks = await GetSavedTracksFromFile();
+        if (string.IsNullOrEmpty(q))
+        {
+            Tracks = await GetFormatedTracks(allTracks);
+            return;
+        }
+
+        var lowerQ = q?.ToLowerInvariant() ?? string.Empty;
+
+        Tracks = allTracks.Where(t => (t.Title?.ToLowerInvariant().Contains(lowerQ) == true) ||
+                                      (t.ChannelTitle?.ToLowerInvariant().Contains(lowerQ) == true) ||
+                                      (lowerQ.Contains(t.Title?.ToLowerInvariant() ?? "") == true) ||
+                                      (lowerQ.Contains(t.ChannelTitle?.ToLowerInvariant() ?? "") == true));
     }
 }
 
@@ -108,7 +133,9 @@
 <div>
     <button @onclick="PreviousTracks" class="btn btn-dark" disabled="@(CurrentPage == 1)">Back</button>
     <button @onclick="NextTracks" class="btn btn-dark">Next</button>
-    @for (var i = 0; i < Tracks.Count(); ++i)
+    <div>Search</div>
+    <input type="text" placeholder="Enter title" class="w-25" @oninput="@SearchFor" />
+@for (var i = 0; i < Tracks.Count(); ++i)
     {
         var video = Tracks.ElementAt(i);
 
@@ -117,7 +144,7 @@
                 <img class="imgTrackCard" src="@video.ThumbnailUrl">
                 <div class="track-card-text">@(video.Title + " " + video.ChannelTitle)</div>
             </a>
-            <button @onclick="() => ModifyVideo(video.Id)" class="btn modifyButton">Modify</button>
+            <button @onclick="() => ModifyVideo(video.Id, video.ThumbnailUrl)" class="btn modifyButton">Modify</button>
         </div>
 
     }

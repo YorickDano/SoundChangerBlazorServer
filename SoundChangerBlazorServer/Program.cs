@@ -1,6 +1,7 @@
 using Google.Apis.Auth.AspNetCore3;
 using IgniteUI.Blazor.Controls;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using SoundChangerBlazorServer.Models.GeniusModels;
 using SoundChangerBlazorServer.Models.SpotifyModels;
 using SoundChangerBlazorServer.Models.YoutubeModels;
 using SoundChangerBlazorServer.Services;
@@ -14,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<SpotifyClientSettings>(builder.Configuration.GetSection(nameof(SpotifyClientSettings)));
 builder.Services.Configure<YoutubeApiSettings>(builder.Configuration.GetSection(nameof(YoutubeApiSettings)));
 builder.Services.Configure<YoutubeDownloaderSettings>(builder.Configuration.GetSection(nameof(YoutubeDownloaderSettings)));
+builder.Services.Configure<GeniusSettings>(builder.Configuration.GetSection(nameof(GeniusSettings)));
 
 builder.Services.AddAuthentication(options =>
 {
@@ -45,6 +47,7 @@ builder.Services.AddSingleton<IYoutubeDownloader, YoutubeDownloader>();
 builder.Services.AddSingleton<IAudioService, AudioService>();
 builder.Services.AddSingleton<INextPageTokenService, YoutubeNextPageTokenService>();
 builder.Services.AddSingleton<SpotifyClient>();
+builder.Services.AddScoped<GeniusService>();
 builder.Services.AddSingleton<StateContainer>();
 builder.Services.AddScoped<YoutubeMusicService>();
 builder.Services.AddIgniteUIBlazor(typeof(IgbSliderModule));

@@ -46,22 +46,22 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
             });
         }
 
-        // Получение рекомендуемых треков
-        public async Task<(List<YoutubeTrack> tracks, string nextPageToken)> GetRecommendedTracksAsync(string? nextPageToken = null, int maxResults = 10)
+        public async Task<(List<YoutubeTrack> tracks, string nextPageToken)> GetLikedTracksAsync(string? nextPageToken = null, int maxResults = 10)
         {
             var recommendedTracks = new List<YoutubeTrack>();
 
             try
             {
-                var searchRequest = _youtubeService.Activities.List("snippet");
-                searchRequest.Mine = true;
+                var searchRequest = _youtubeService.Videos.List("snippet");
+                searchRequest.MyRating = VideosResource.ListRequest.MyRatingEnum.Like;
+                searchRequest.VideoCategoryId = "10";
                 searchRequest.PageToken = nextPageToken;
                 searchRequest.MaxResults = maxResults;
                 searchRequest.AccessToken = _httpContextAccessor.HttpContext!.Session.GetString("YouTubeAccessToken");
 
                 var searchResponse = await searchRequest.ExecuteAsync();
 
-                foreach (var searchResult in searchResponse.Items)
+                foreach (var searchResult in searchResponse.Items.Where(i => i.Snippet.CategoryId == "10"))
                 {
                     var track = new YoutubeTrack
                     {
@@ -87,14 +87,12 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
 
         private async Task<string> GenerateAuthUrl()
         {
-            var redirectUri = Path.Combine(_navigationManager.BaseUri, "callback");
-
             var parameters = new Dictionary<string, string>
             {
                 ["client_id"] = _configuration["Google:ClientId"],
-                ["redirect_uri"] = redirectUri,
+                ["redirect_uri"] = _configuration["Google:Callback"],
                 ["response_type"] = "code",
-                ["scope"] = "https://www.googleapis.com/auth/youtube.readonly",
+                ["scope"] = _configuration["Google:Scope"],
                 ["prompt"] = "consent",
                 ["include_granted_scopes"] = "true",
                 ["access_type"] = "offline",
@@ -104,7 +102,7 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
             var queryString = string.Join("&", parameters
                 .Select(p => $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
 
-            return $"https://accounts.google.com/o/oauth2/v2/auth?{queryString}";
+            return $"{_configuration["Google:AuthUrl"]}{queryString}";
         }
     }
 

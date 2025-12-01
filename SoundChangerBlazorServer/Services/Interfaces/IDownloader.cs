@@ -1,7 +1,9 @@
-﻿namespace SoundChangerBlazorServer.Services.Interfaces
+﻿using SoundChangerBlazorServer.Models.YoutubeModels;
+
+namespace SoundChangerBlazorServer.Services.Interfaces
 {
     public interface IDownloader
     {
-        Task<(string Name, string Path)> Download(string videoId);
+        Task<(YoutubeVideo Video, string Path)> Download(string videoId);
     }
 }

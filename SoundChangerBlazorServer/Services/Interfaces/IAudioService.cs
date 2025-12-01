@@ -17,5 +17,7 @@ namespace SoundChangerBlazorServer.Services.Interfaces
         Task ReturnTo(int id);
         Task DeleteAllAsync();
         Task ReturnToPrevious();
+        Task UpdateImageUrl(string imgUrl);
+        Task UpdateLyrics(string lyrics);
     }
 }

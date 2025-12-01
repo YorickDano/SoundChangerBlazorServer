@@ -1,0 +1,224 @@
+﻿<div class="modal-background @(Show ? "show" : "")" @onclick="Close">
+    <div class="modal-content" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h3>Текст песни</h3>
+            <button class="close-btn" @onclick="Close">×</button>
+        </div>
+        <div class="lyrics-container">
+            @if (HasFormattedLyrics)
+            {
+                @foreach (var sec in formattedLyrics)
+                {
+                    <div class="lyrics-section">
+                        @if (!string.IsNullOrEmpty(sec.Title))
+                        {
+                            <div class="section-title">@sec.Title</div>
+                        }
+                        <div class="section-text">@sec.Text</div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="lyrics-text">@LyricsText</div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal-background {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .modal-background.show {
+        display: flex;
+    }
+
+    .modal-content {
+        background: #1a1a1a;
+        color: white;
+        padding: 0;
+        border-radius: 12px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 85vh;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid #333;
+        background: #2a2a2a;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        color: #fff;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 28px;
+        cursor: pointer;
+        padding: 0;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .close-btn:hover {
+        background: rgba(255,255,255,0.1);
+    }
+
+    .lyrics-container {
+        padding: 20px;
+        max-height: calc(85vh - 80px);
+        overflow-y: auto;
+    }
+
+    .lyrics-section {
+        margin-bottom: 25px;
+    }
+
+    .section-title {
+        color: #ff6b6b;
+        font-weight: bold;
+        font-size: 1.1em;
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        background: rgba(255,107,107,0.1);
+        border-radius: 6px;
+        border-left: 3px solid #ff6b6b;
+    }
+
+    .section-text {
+        white-space: pre-line;
+        line-height: 1.6;
+        font-size: 1.05em;
+        padding: 0 12px;
+    }
+
+    .lyrics-text {
+        white-space: pre-line;
+        line-height: 1.6;
+        font-size: 1.05em;
+    }
+
+    /* Стили для скроллбара */
+    .lyrics-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .lyrics-container::-webkit-scrollbar-track {
+        background: #2a2a2a;
+        border-radius: 3px;
+    }
+
+    .lyrics-container::-webkit-scrollbar-thumb {
+        background: #ff6b6b;
+        border-radius: 3px;
+    }
+
+    .lyrics-container::-webkit-scrollbar-thumb:hover {
+        background: #ff5252;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public bool Show { get; set; }
+
+    [Parameter]
+    public string LyricsText { get; set; } = "";
+
+    [Parameter]
+    public EventCallback<bool> ShowChanged { get; set; }
+
+    private List<LyricsSection> formattedLyrics = new();
+    private bool HasFormattedLyrics => formattedLyrics.Any();
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(LyricsText))
+        {
+            FormatLyrics();
+        }
+    }
+
+    private void FormatLyrics()
+    {
+        formattedLyrics.Clear();
+        
+        var lines = LyricsText.Split('\n');
+        LyricsSection currentSection = new();
+
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+            
+            // Проверяем, является ли строка заголовком секции (в квадратных скобках)
+            if (trimmedLine.StartsWith("[") && trimmedLine.EndsWith("]"))
+            {
+                // Сохраняем предыдущую секцию если она не пустая
+                if (!string.IsNullOrEmpty(currentSection.Text) || !string.IsNullOrEmpty(currentSection.Title))
+                {
+                    formattedLyrics.Add(currentSection);
+                }
+                
+                // Начинаем новую секцию
+                currentSection = new LyricsSection 
+                { 
+                    Title = trimmedLine.Trim('[', ']') 
+                };
+            }
+            else if (!string.IsNullOrEmpty(trimmedLine))
+            {
+                // Добавляем текст к текущей секции
+                if (!string.IsNullOrEmpty(currentSection.Text))
+                {
+                    currentSection.Text += "\n" + trimmedLine;
+                }
+                else
+                {
+                    currentSection.Text = trimmedLine;
+                }
+            }
+        }
+
+        // Добавляем последнюю секцию
+        if (!string.IsNullOrEmpty(currentSection.Text) || !string.IsNullOrEmpty(currentSection.Title))
+        {
+            formattedLyrics.Add(currentSection);
+        }
+    }
+
+    private async Task Close()
+    {
+        await ShowChanged.InvokeAsync(false);
+    }
+
+    private class LyricsSection
+    {
+        public string Title { get; set; } = "";
+        public string Text { get; set; } = "";
+    }
+}

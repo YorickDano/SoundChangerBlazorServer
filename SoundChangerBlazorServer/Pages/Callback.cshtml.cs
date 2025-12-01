@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using SoundChangerBlazorServer.Services;
 using SoundChangerBlazorServer.Services.YoutubeServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -11,46 +12,57 @@ namespace SoundChangerBlazorServer.Pages
     {
         private readonly YoutubeMusicService _youtubeMusicService;
         private readonly IConfiguration _configuration;
-        private readonly NavigationManager _navigationManager;
-        public CallbackModel(YoutubeMusicService youtubeMusicService, 
-                             IConfiguration configuration, NavigationManager navigationManager)
+        private readonly GeniusService _geniusService;
+        private readonly StateContainer _stateContainer;
+
+        public CallbackModel(YoutubeMusicService youtubeMusicService, IConfiguration configuration,
+                             GeniusService geniusService, StateContainer stateContainer)
         {
             _youtubeMusicService = youtubeMusicService;
             _configuration = configuration;
-            _navigationManager = navigationManager;
+            _geniusService = geniusService;
+            _stateContainer = stateContainer;
         }
-        
-        public async Task<IActionResult> OnGetAsync(string code, string scope)
+
+        public async Task<IActionResult> OnGetGeniusAsync(string code)
+        {
+            var token = await _geniusService.Authorize(code);
+            _stateContainer.Token = token;
+
+            return Page();
+        }
+
+        public async Task<IActionResult> OnGetYoutubeAsync(string code, string scope)
         {
             var tokenResponse = await ExchangeCodeForTokenAsync(code);
 
-            // Инициализируйте сервис с токеном
             _youtubeMusicService.InitializeWithToken(tokenResponse.AccessToken);
 
-            // Сохраните токен (в сессии, базе данных, etc)
             HttpContext.Session.SetString("YouTubeAccessToken", tokenResponse.AccessToken);
             HttpContext.Session.SetString("YouTubeRefreshToken", tokenResponse.RefreshToken);
-         
+
             return Page();
         }
 
         private async Task<TokenResponse> ExchangeCodeForTokenAsync(string code)
         {
             using var httpClient = new HttpClient();
-            var redirectUri = Path.Combine("https://localhost:7242/", "callback");
+            var redirectUri = _configuration["Google:Callback"] ?? throw new InvalidOperationException("Google:Callback is not configured.");
+            var clientId = _configuration["Google:ClientId"] ?? throw new InvalidOperationException("Google:ClientId is not configured.");
+            var clientSecret = _configuration["Google:ClientSecret"] ?? throw new InvalidOperationException("Google:ClientSecret is not configured.");
 
             var tokenRequest = new Dictionary<string, string>
             {
                 ["code"] = code,
-                ["client_id"] = _configuration["Google:ClientId"],
-                ["client_secret"] = _configuration["Google:ClientSecret"],
+                ["client_id"] = clientId,
+                ["client_secret"] = clientSecret,
                 ["redirect_uri"] = redirectUri,
                 ["grant_type"] = "authorization_code",
                 ["access_type"] = "offline",
                 ["prompt"] = "consent"
             };
 
-            var response = await httpClient.PostAsync("https://oauth2.googleapis.com/token",
+            var response = await httpClient.PostAsync(_configuration["Google:TokenUrl"],
                 new FormUrlEncodedContent(tokenRequest));
 
             if (!response.IsSuccessStatusCode)
@@ -60,25 +72,27 @@ namespace SoundChangerBlazorServer.Pages
             }
 
             var jsonResponse = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<TokenResponse>(jsonResponse);
+            var tokenResponse = JsonSerializer.Deserialize<TokenResponse>(jsonResponse);
+
+            return tokenResponse ?? throw new Exception("Failed to deserialize token response.");
         }
 
         public class TokenResponse
         {
             [JsonPropertyName("access_token")]
-            public string AccessToken { get; set; }
+            public required string AccessToken { get; set; }
 
             [JsonPropertyName("expires_in")]
             public int ExpiresIn { get; set; }
 
             [JsonPropertyName("refresh_token")]
-            public string RefreshToken { get; set; }
+            public required string RefreshToken { get; set; }
 
             [JsonPropertyName("scope")]
-            public string Scope { get; set; }
+            public required string Scope { get; set; }
 
             [JsonPropertyName("token_type")]
-            public string TokenType { get; set; }
+            public required string TokenType { get; set; }
         }
     }
 }

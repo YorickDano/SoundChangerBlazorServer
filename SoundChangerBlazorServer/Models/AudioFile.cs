@@ -9,6 +9,10 @@ namespace SoundChangerBlazorServer.Models
         public string Title { get; set; }
         public string Extension { get; set; }
         public string Format { get; set; }
+        public string? VideoId { get; set; }
+        public string? ImageUrl { get; set; }
+        public string? Author { get; set; }
+        public string? Lyrics { get; set; }
         public bool Created { get; set; } = false;
         public string WWWRootPath { get; set; }
         public double Tempo { get; set; } = 1;
@@ -38,6 +42,8 @@ namespace SoundChangerBlazorServer.Models
             anotherAf.Format = new string(this.Format);
             anotherAf.WWWRootPath = new string(this.WWWRootPath);
             anotherAf.Title = new string(this.Title);
+            anotherAf.Author = new string(this.Author);
+            anotherAf.ImageUrl = new string(this.ImageUrl);
         }
 
         public static AudioFile Init(InputFileChangeEventArgs e) => 
@@ -48,6 +54,13 @@ namespace SoundChangerBlazorServer.Models
                 Extension = Path.GetExtension(e.File.Name),
                 Format = e.File.ContentType,
             };
-        }
-    
+        
+        public static AudioFile Init(string fullPath) =>
+            new AudioFile()
+            {
+                FileName = Path.GetFileNameWithoutExtension(fullPath),
+                Title = Path.GetFileNameWithoutExtension(fullPath[..fullPath.LastIndexOf('[')]),
+                Extension = Path.GetExtension(fullPath)
+            };
+    }
 }
