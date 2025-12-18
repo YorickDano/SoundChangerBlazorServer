@@ -3,6 +3,7 @@ using NAudio.MediaFoundation;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using SoundChangerBlazorServer.Models;
+using SoundChangerBlazorServer.Services.Enums;
 using SoundChangerBlazorServer.Services.Interfaces;
 using SoundTouch.Net.NAudioSupport;
 
@@ -30,6 +31,33 @@ namespace SoundChangerBlazorServer.Services
         public async Task ReturnTo(int id) => _audioFile = _audioFiles.First(x => x.Id == id);
         public async Task UpdateImageUrl(string imgUrl) => _audioFile.ImageUrl = imgUrl;
         public async Task UpdateLyrics(string lyrics) => _audioFile.Lyrics = lyrics;
+        public async Task Delete(int id)
+        {
+            var audioToRemove = _audioFiles.FirstOrDefault(x => x.Id == id) ?? throw new Exception("Incorrect id!");
+            _audioFiles.Remove(audioToRemove);
+            File.Delete(audioToRemove.FilePath);
+            _audioFile = _audioFiles.LastOrDefault(new AudioFile());        
+        }
+        public async Task<double> GetAllSize(SizeType type = SizeType.Megabyte) => type switch
+        {
+            SizeType.Byte => _audioFiles.Sum(a => a.Size),
+            SizeType.Kilobyte => _audioFiles.Sum(a => a.Size / 1024.0),
+            SizeType.Megabyte => _audioFiles.Sum(a => a.Size / 1024.0 / 1024),
+            SizeType.Gigabyte => _audioFiles.Sum(a => a.Size / 1024.0 / 1024 / 1024),
+            _ => throw new Exception($"Cannot hnadle this type {type}")
+        };
+        public async Task UpdateCurrentToLast()
+        {
+            if (Any())
+            {
+                _audioFile = _audioFiles.Last();
+            }
+        } 
+        public async Task AddAudio(AudioFile audio)
+        {
+            audio.Id = _audioFiles.Count + 1;
+            _audioFiles.Add(audio);
+        }
 
         public async Task DeleteAllAsync()
         {
@@ -62,6 +90,7 @@ namespace SoundChangerBlazorServer.Services
             _audioFile.Id = _audioFiles.Count + 1;
             _audioFile.WWWRootPath = wwwrootPath;
             _audioFile.FileName += _audioFiles.Count;
+            _audioFile.Size = e.File.Size;
 
             if (_audioFile.Extension == ".mp3")
             {
@@ -112,6 +141,7 @@ namespace SoundChangerBlazorServer.Services
             audioFile.Author = fileInfo.Video.ChannelTitle.Replace("- Topic", "")
                                                           .Trim();
             audioFile.Title = fileInfo.Video.Title;
+            audioFile.Size = new FileInfo(audioFile.FilePath).Length;
 
             audioFile.Created = true;
             _audioFiles.Add(audioFile);
@@ -153,8 +183,9 @@ namespace SoundChangerBlazorServer.Services
                 newAudioFile.Tempo = settings.Tempo;
                 newAudioFile.Pitch = settings.Pitch;
                 newAudioFile.Rate = settings.Rate;
+                newAudioFile.Size = new FileInfo(newAudioFile.FilePath).Length;
+                newAudioFile.Id = _audioFiles.Count + 1;
                 _audioFiles.Add(newAudioFile);
-                _audioFile.Id = _audioFiles.Count;
                 _audioFile = _audioFiles[^1];
             }
         }
@@ -265,18 +296,22 @@ namespace SoundChangerBlazorServer.Services
             _audioFile = _audioFiles[^1];
         }
 
-        public void ConvertCurrentToMp3()
+        public async Task<AudioFile> ConvertCurrentToMp3()
         {
-            using var fileReader = new WaveFileReader(_audioFile.FilePath);
-            _audioFile.Extension = ".mp3";
+            var mp3File = new AudioFile();
+            _audioFile.CopyTo(mp3File);
+            using var fileReader = new WaveFileReader(mp3File.FilePath);
+            mp3File.Extension = ".mp3";
             var mediaType = MediaFoundationEncoder.SelectMediaType(AudioSubtypes.MFAudioFormat_MP3,
                             fileReader.WaveFormat, 320000);
             using (var encoder = new MediaFoundationEncoder(mediaType))
             {
                 MediaFoundationApi.Startup();
-                MediaFoundationEncoder.EncodeToMp3(fileReader, _audioFile.FilePath, 320000);
+                MediaFoundationEncoder.EncodeToMp3(fileReader, mp3File.FilePath, 320000);
                 MediaFoundationApi.Shutdown();
             }
+
+            return mp3File;
         }
     }
 }

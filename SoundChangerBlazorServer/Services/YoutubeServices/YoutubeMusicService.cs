@@ -14,6 +14,8 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
         private readonly IJSRuntime _jsRuntime;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
+        public bool IsAuthorized { get; private set; } = false;
+
         public YoutubeMusicService(IConfiguration configuration, NavigationManager navigationManager,
                                    IJSRuntime jSRuntime, IHttpContextAccessor httpContextAccessor)
         {
@@ -35,16 +37,6 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
             await _jsRuntime.InvokeVoidAsync("open", url, "_blank");
         }
 
-        public void InitializeWithToken(string accessToken)
-        {
-            var credential = GoogleCredential.FromAccessToken(accessToken);
-
-            _youtubeService = new YouTubeService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = credential,
-                ApplicationName = "YouTubeMusicApp"
-            });
-        }
 
         public async Task<(List<YoutubeTrack> tracks, string nextPageToken)> GetLikedTracksAsync(string? nextPageToken = null, int maxResults = 10)
         {
@@ -89,10 +81,10 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
         {
             var parameters = new Dictionary<string, string>
             {
-                ["client_id"] = _configuration["Google:ClientId"],
-                ["redirect_uri"] = _configuration["Google:Callback"],
+                ["client_id"] = _configuration["Google:ClientId"]!,
+                ["redirect_uri"] = _configuration["Google:Callback"]!,
+                ["scope"] = _configuration["Google:Scope"]!,
                 ["response_type"] = "code",
-                ["scope"] = _configuration["Google:Scope"],
                 ["prompt"] = "consent",
                 ["include_granted_scopes"] = "true",
                 ["access_type"] = "offline",

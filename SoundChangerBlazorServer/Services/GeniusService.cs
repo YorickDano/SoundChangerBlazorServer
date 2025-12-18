@@ -1,12 +1,9 @@
-﻿using AngleSharp.Dom;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 using RestSharp;
 using SoundChangerBlazorServer.Models.GeniusModels;
 using SoundChangerBlazorServer.Utils;
 using Swan;
-using System;
-using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -39,7 +36,6 @@ namespace SoundChangerBlazorServer.Services
             {
                 var genieRes = JsonSerializer.Deserialize<GeniusSearchResponse.Root>(response.Content);
                 var lyricsPath = genieRes.response.hits?[0].result.path;
-
 
                 var _httpClient = new HttpClient();
                 var res = await _httpClient.GetAsync($"https://genius.com{lyricsPath}");

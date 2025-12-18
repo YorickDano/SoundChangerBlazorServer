@@ -236,7 +236,7 @@
                     <span>Bass Boost</span>
                     <span class="control-value" id="bass-value">1.0</span>
                 </div>
-                <input type="range" id="bass" min="0.1" max="2.0" step="0.1" value="1.0" />
+                <input type="range" id="bass" min="0.01" max="2.0" step="0.01" value="1.0" />
             </div>
         </div>
 
@@ -299,8 +299,7 @@
 
 
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
-           
-           
+
             source = audioContext.createMediaElementSource(audioElement);
             // Create gain node for volume control
             gainNode = audioContext.createGain();
@@ -310,12 +309,9 @@
             bassBoost = audioContext.createBiquadFilter();
             bassBoost.type = 'lowshelf';
             bassBoost.frequency.setValueAtTime(100, audioContext.currentTime);
-
-            // Connect nodes: source -> bassBoost -> gain -> destination
-            
-            source.connect(bassBoost);
-            bassBoost.connect(soundTouch);
-            soundTouch.connect(gainNode);
+            source.connect(soundTouch);
+            soundTouch.connect(bassBoost);
+            bassBoost.connect(gainNode);
             gainNode.connect(audioContext.destination);
 
             // Setup visualizer
@@ -517,8 +513,9 @@
             // Bass control
             bassControl.addEventListener('input', () => {
                 if (bassBoost) {
+                    var value = parseFloat(bassControl.value);
                     bassBoost.gain.setValueAtTime(
-                        parseFloat(bassControl.value) * 10,
+                         value <= 1 ? -(value) : value * 10,
                         audioContext.currentTime
                     );
                 }

@@ -1,6 +1,7 @@
 using Google.Apis.Auth.AspNetCore3;
 using IgniteUI.Blazor.Controls;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.Configuration;
 using SoundChangerBlazorServer.Models.GeniusModels;
 using SoundChangerBlazorServer.Models.SpotifyModels;
 using SoundChangerBlazorServer.Models.YoutubeModels;
@@ -9,6 +10,7 @@ using SoundChangerBlazorServer.Services.Interfaces;
 using SoundChangerBlazorServer.Services.YoutubeServices;
 using SoundChangerBlazorServer.Utils;
 using Syncfusion.Blazor;
+using Telerik.DataSource.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,10 +29,11 @@ builder.Services.AddAuthentication(options =>
 {
     options.ClientId = builder.Configuration["Google:ClientId"];
     options.ClientSecret = builder.Configuration["Google:ClientSecret"];
-    options.Scope.Add("https://www.googleapis.com/auth/youtube");
-    options.Scope.Add("https://www.googleapis.com/auth/youtube.force-ssl");
-    options.Scope.Add("https://www.googleapis.com/auth/youtube.readonly");
+    options.Scope.AddRange(builder.Configuration.GetSection("Google:Scopes").Get<IEnumerable<string>>());
+    options.SaveTokens = true;
 });
+
+builder.Services.AddAuthorization();
 
 // Добавляем сервисы сессии
 builder.Services.AddSession(options =>
@@ -43,8 +46,9 @@ builder.Services.AddSession(options =>
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddYoutubeClient(builder.Configuration);
-builder.Services.AddSingleton<IYoutubeDownloader, YoutubeDownloader>();
-builder.Services.AddSingleton<IAudioService, AudioService>();
+builder.Services.AddScoped<CutterService>();
+builder.Services.AddScoped<IYoutubeDownloader, YoutubeDownloader>();
+builder.Services.AddScoped<IAudioService, AudioService>();
 builder.Services.AddSingleton<INextPageTokenService, YoutubeNextPageTokenService>();
 builder.Services.AddSingleton<SpotifyClient>();
 builder.Services.AddScoped<GeniusService>();
@@ -54,6 +58,7 @@ builder.Services.AddIgniteUIBlazor(typeof(IgbSliderModule));
 builder.Services.AddSyncfusionBlazor();
 builder.Services.AddSingleton<IClearService, ClearService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddTelerikBlazor();
 
 var app = builder.Build();
 
@@ -69,6 +74,8 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 app.UseSession();

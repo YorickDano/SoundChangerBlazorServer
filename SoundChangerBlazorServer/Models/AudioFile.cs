@@ -19,6 +19,7 @@ namespace SoundChangerBlazorServer.Models
         public double Pitch { get; set; } = 1;
         public double Rate { get; set; } = 1;
         public TimeSpan Duration { get; set; }
+        public long Size { get; set; }
 
         public string FilePath
         {
@@ -44,6 +45,8 @@ namespace SoundChangerBlazorServer.Models
             anotherAf.Title = new string(this.Title);
             anotherAf.Author = new string(this.Author);
             anotherAf.ImageUrl = new string(this.ImageUrl);
+            anotherAf.Lyrics = new string(this.Lyrics);
+            anotherAf.Created = this.Created;
         }
 
         public static AudioFile Init(InputFileChangeEventArgs e) => 
@@ -59,8 +62,9 @@ namespace SoundChangerBlazorServer.Models
             new AudioFile()
             {
                 FileName = Path.GetFileNameWithoutExtension(fullPath),
-                Title = Path.GetFileNameWithoutExtension(fullPath[..fullPath.LastIndexOf('[')]),
-                Extension = Path.GetExtension(fullPath)
+                Title = Path.GetFileNameWithoutExtension(fullPath),
+                Extension = Path.GetExtension(fullPath),
+                Created = true
             };
     }
 }

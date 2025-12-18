@@ -16,7 +16,7 @@ namespace SoundChangerBlazorServer.Services
             var directoryInfo = new DirectoryInfo(_environment.WebRootPath);
             await Task.Run(() =>
             {
-                foreach (var file in directoryInfo.GetFiles("*.wav"))
+                foreach (var file in new[] { "*.wav", "*.mp3" }.SelectMany(directoryInfo.EnumerateFiles))
                 {
                     file.Delete();
                 }

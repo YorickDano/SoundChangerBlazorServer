@@ -1,8 +1,6 @@
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SoundChangerBlazorServer.Services;
-using SoundChangerBlazorServer.Services.YoutubeServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -10,15 +8,13 @@ namespace SoundChangerBlazorServer.Pages
 {
     public class CallbackModel : PageModel
     {
-        private readonly YoutubeMusicService _youtubeMusicService;
         private readonly IConfiguration _configuration;
         private readonly GeniusService _geniusService;
         private readonly StateContainer _stateContainer;
 
-        public CallbackModel(YoutubeMusicService youtubeMusicService, IConfiguration configuration,
-                             GeniusService geniusService, StateContainer stateContainer)
+        public CallbackModel(IConfiguration configuration, GeniusService geniusService, 
+                             StateContainer stateContainer)
         {
-            _youtubeMusicService = youtubeMusicService;
             _configuration = configuration;
             _geniusService = geniusService;
             _stateContainer = stateContainer;
@@ -35,8 +31,6 @@ namespace SoundChangerBlazorServer.Pages
         public async Task<IActionResult> OnGetYoutubeAsync(string code, string scope)
         {
             var tokenResponse = await ExchangeCodeForTokenAsync(code);
-
-            _youtubeMusicService.InitializeWithToken(tokenResponse.AccessToken);
 
             HttpContext.Session.SetString("YouTubeAccessToken", tokenResponse.AccessToken);
             HttpContext.Session.SetString("YouTubeRefreshToken", tokenResponse.RefreshToken);

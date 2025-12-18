@@ -177,32 +177,33 @@ a, .btn-link {
 .file-input-container {
     position: relative;
     display: block;
-    margin: 20px 0;
+    margin: 15px 0;
     width: 100%;
 }
 
 .file-input-label {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 20px 30px;
+    padding: 8px 15px;
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;
-    border-radius: 15px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     font-weight: 500;
     border: none;
-    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
-    min-height: 60px;
-    /* Ensure proper flex behavior */
+    box-shadow: 0 3px 8px rgba(79, 70, 229, 0.25);
+    min-height: 45px;
+    height: 45px;
     text-align: center;
 }
 
     .file-input-label:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
         background: linear-gradient(135deg, var(--primary-dark) 0%, #4338ca 100%);
     }
 
@@ -214,51 +215,84 @@ a, .btn-link {
     width: 100%;
     height: 100%;
     cursor: pointer;
+    z-index: 2; 
 }
 
-.file-input-text {
-    /* Remove any conflicting styles and ensure centering */
+.file-input-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+.file-input-text-line {
     display: block;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     text-align: center;
     width: 100%;
-    /* Reset margins and padding */
     margin: 0;
     padding: 0;
-    /* Ensure proper flex item behavior */
     line-height: 1.2;
+    white-space: nowrap;
+    padding: 50px 0 0 0;
+    text-overflow: ellipsis;
 }
 
-/* Force centering for all child elements */
-.file-input-label > * {
-    margin: 0 auto;
-    text-align: center;
+
+    .file-input-text-line + .file-input-text-line {
+        margin-top: 2px;
+    }
+
+.file-input-or {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 1px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-/* Alternative: Use grid for perfect centering */
-.file-input-label.grid-center {
-    display: grid;
-    place-items: center;
-    text-align: center;
-}
-
-/* Debug borders (remove after testing) */
-.file-input-label {
-    padding: 75px 0 0 0;
-}
-
-/* Responsive design */
 @media (max-width: 768px) {
-    .file-input-label {
-        padding: 18px 15px;
-        min-height: 55px;
+    .file-input-container {
+        max-width: 100%;
     }
 
-    .file-input-text {
-        font-size: 16px;
+    .file-input-label {
+        padding: 6px 12px;
+        min-height: 40px;
+        height: 40px;
+        border-radius: 6px;
+    }
+
+    .file-input-text-line {
+        font-size: 12px;
+    }
+
+    .file-input-or {
+        font-size: 10px;
     }
 }
+
+.file-input-label.compact {
+    min-height: 40px;
+    height: 40px;
+    padding: 5px 12px;
+}
+
+    .file-input-label.compact .file-input-text-line {
+        font-size: 12px;
+        line-height: 1.1;
+    }
+
+    .file-input-label.compact .file-input-or {
+        font-size: 10px;
+        margin: 0.5px 0;
+    }
 
 .or-separator {
     text-align: center;
@@ -598,7 +632,7 @@ input, select {
     margin: 5px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .btn-primary {
@@ -656,20 +690,16 @@ input, select {
 }
 
 #audioParent {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 15px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 5px;
     border-radius: 12px;
     margin: 10px 0;
     transition: var(--transition);
 }
 
-    #audioParent:hover {
-        background: rgba(255, 255, 255, 0.15);
-    }
-
 audio {
     width: 100%;
-    margin: 10px 0;
+    margin: 5px 0;
     border-radius: 30px;
     height: 40px;
 }
@@ -677,7 +707,7 @@ audio {
 .audio-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 5px;
     margin-bottom: 20px;
     align-items: center;
 }
@@ -705,7 +735,9 @@ audio {
 .w-100 {
     width: 100%;
 }
-
+.w-10 {
+    width: 10%;
+}
 .center {
     text-align: center;
 }

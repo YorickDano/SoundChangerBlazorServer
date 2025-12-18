@@ -1,8 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using SoundChangerBlazorServer.Models.SpotifyModels;
-using SoundChangerBlazorServer.Models.YoutubeModels;
-using SoundChangerBlazorServer.Services;
-using System.Net;
+﻿using SoundChangerBlazorServer.Models.YoutubeModels;
 using YoutubeExplode;
 
 namespace SoundChangerBlazorServer.Utils

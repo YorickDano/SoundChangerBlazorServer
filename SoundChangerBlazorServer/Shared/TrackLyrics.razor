@@ -1,4 +1,5 @@
-﻿<div class="modal-background @(Show ? "show" : "")" @onclick="Close">
+﻿@using System.Text
+<div class="modal-background @(Show ? "show" : "")" @onclick="Close">
     <div class="modal-content" @onclick:stopPropagation="true">
         <div class="modal-header">
             <h3>Текст песни</h3>
@@ -40,9 +41,9 @@
         z-index: 1000;
     }
 
-    .modal-background.show {
-        display: flex;
-    }
+        .modal-background.show {
+            display: flex;
+        }
 
     .modal-content {
         background: #1a1a1a;
@@ -65,10 +66,10 @@
         background: #2a2a2a;
     }
 
-    .modal-header h3 {
-        margin: 0;
-        color: #fff;
-    }
+        .modal-header h3 {
+            margin: 0;
+            color: #fff;
+        }
 
     .close-btn {
         background: none;
@@ -85,9 +86,9 @@
         justify-content: center;
     }
 
-    .close-btn:hover {
-        background: rgba(255,255,255,0.1);
-    }
+        .close-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
 
     .lyrics-container {
         padding: 20px;
@@ -138,9 +139,9 @@
         border-radius: 3px;
     }
 
-    .lyrics-container::-webkit-scrollbar-thumb:hover {
-        background: #ff5252;
-    }
+        .lyrics-container::-webkit-scrollbar-thumb:hover {
+            background: #ff5252;
+        }
 </style>
 
 @code {
@@ -167,45 +168,33 @@
     private void FormatLyrics()
     {
         formattedLyrics.Clear();
-        
+
         var lines = LyricsText.Split('\n');
         LyricsSection currentSection = new();
 
         foreach (var line in lines)
         {
             var trimmedLine = line.Trim();
-            
-            // Проверяем, является ли строка заголовком секции (в квадратных скобках)
+
             if (trimmedLine.StartsWith("[") && trimmedLine.EndsWith("]"))
             {
-                // Сохраняем предыдущую секцию если она не пустая
-                if (!string.IsNullOrEmpty(currentSection.Text) || !string.IsNullOrEmpty(currentSection.Title))
+                if (currentSection.Text.Length != 0 && !string.IsNullOrEmpty(currentSection.Title))
                 {
                     formattedLyrics.Add(currentSection);
                 }
-                
-                // Начинаем новую секцию
-                currentSection = new LyricsSection 
-                { 
-                    Title = trimmedLine.Trim('[', ']') 
+
+                currentSection = new LyricsSection
+                {
+                    Title = trimmedLine.Trim('[', ']')
                 };
             }
             else if (!string.IsNullOrEmpty(trimmedLine))
             {
-                // Добавляем текст к текущей секции
-                if (!string.IsNullOrEmpty(currentSection.Text))
-                {
-                    currentSection.Text += "\n" + trimmedLine;
-                }
-                else
-                {
-                    currentSection.Text = trimmedLine;
-                }
+                currentSection.Text.Append("\n" + trimmedLine);
             }
         }
 
-        // Добавляем последнюю секцию
-        if (!string.IsNullOrEmpty(currentSection.Text) || !string.IsNullOrEmpty(currentSection.Title))
+        if (currentSection.Text.Length != 0 || !string.IsNullOrEmpty(currentSection.Title))
         {
             formattedLyrics.Add(currentSection);
         }
@@ -219,6 +208,6 @@
     private class LyricsSection
     {
         public string Title { get; set; } = "";
-        public string Text { get; set; } = "";
+        public StringBuilder Text { get; set; } = new StringBuilder();
     }
 }

@@ -1,0 +1,184 @@
+﻿@page "/cutter"
+@using SoundChangerBlazorServer.Services.Interfaces
+@using Telerik.Blazor.Components
+<h3>Cutter</h3>
+
+@inject CutterService CutterService;
+@inject IWebHostEnvironment _environment;
+@inject IJSRuntime JSRuntime;
+@inject NavigationManager NavigationManager
+@inject IAudioService AudioService;
+
+@code {
+
+    private AudioFile _currentFile;
+    private double AudioValue = 0.0;
+    private IList<AudioFile> Cutters;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentFile = await CutterService.GetCurrent();
+        using (var waveReader = new WaveFileReader(_currentFile.FilePath))
+        {
+            _currentFile.Duration = waveReader.TotalTime;
+        }
+
+        End = _currentFile.Duration.TotalSeconds;
+        Cutters = (await FileUtils.GetAllFilesContains(_environment.WebRootPath, $"{nameof(Cutter)}"))
+                    .Select(x => AudioFile.Init(x))
+                    .ToList();
+
+        await base.OnInitializedAsync();  
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("GLOBAL.SetDotnetReference", DotNetObjectReference.Create(this));
+        }
+    }
+
+    private void OnChangeAudioValue(IgbNumberEventArgs e)
+    {
+        if (e != null)
+        {
+            AudioValue = e.Detail;
+        }
+    }
+    private TelerikRangeSlider<double> RangeSlider { get; set; }
+    private double Start = 0;
+    private double End;
+
+    [JSInvokable]
+    public async Task Cut(int startSec, int endSec)
+    {
+        var cutter = new AudioFile();
+        _currentFile.CopyTo(cutter);
+        cutter.Title += $"{nameof(Cutter)}";
+        cutter.FileName += $"{nameof(Cutter)}_{startSec}_{endSec}";
+
+        using (var reader = new WaveFileReader(_currentFile.FilePath))
+        {
+            var bytesPerSec = reader.WaveFormat.SampleRate * reader.WaveFormat.Channels * (reader.WaveFormat.BitsPerSample / 8);
+            var startPosition = startSec * bytesPerSec;
+            var endPosition = endSec * bytesPerSec;
+            var length = endPosition - startPosition;
+
+            reader.Position = startPosition;
+
+            using (var writer = new WaveFileWriter(cutter.FilePath, reader.WaveFormat))
+            {
+                var buffer = new byte[reader.WaveFormat.AverageBytesPerSecond];
+                int bytesRead;
+                long bytesToRead = Math.Min(length, reader.Length - startPosition);
+
+                while (bytesToRead > 0 &&
+                       (bytesRead = await reader.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, bytesToRead))) > 0)
+                {
+                    await writer.WriteAsync(buffer, 0, bytesRead);
+                    bytesToRead -= bytesRead;
+                }
+            }
+        }
+        cutter.Created = true;
+        Cutters.Add(cutter);
+        NavigationManager.NavigateTo($"{nameof(Cutter)}", true);
+    }
+
+    private async Task Edit(string fileName)
+    {
+        var file = Cutters.First(c => c.FileName == fileName);
+        await AudioService.AddAudio(file);
+        await AudioService.UpdateCurrentToLast();
+        NavigationManager.NavigateTo("", true);
+    }
+}
+
+<audio id="player" controls src="\@_currentFile.AudioPath"></audio>
+<audio id="hPlayer" src="\@_currentFile.AudioPath"></audio>
+0 - @_currentFile.Duration
+<TelerikRangeSlider Class="w-75"
+                    @bind-StartValue="@Start"
+                    @bind-EndValue="@End"
+                    @ref="@RangeSlider"
+                    Min="0"
+                    Max="@_currentFile.Duration.TotalSeconds"
+                    SmallStep="1"
+                    LargeStep="10">
+    <LabelTemplate>
+        <span style="font-weight:bold;">
+            @(((int)(context / 60) + (context % 60) / 100).ToString("F2"))
+        </span>
+    </LabelTemplate>
+</TelerikRangeSlider>
+<input class="btn-primary w-25" type="button" id="playBut" value="Play">
+<input class="btn-primary w-25" type="button" id="cutBut" value="Cut">
+
+@if (Cutters.Any())
+{
+    <div>
+        @foreach(var cutter in Cutters)
+        {
+            @cutter.Title
+            <br />
+            <audio controls src="\@cutter.AudioPath"></audio>
+            <br />
+            <input class="btn-primary w-25" type="button" id="editBut" @onclick="() => Edit(cutter.FileName)" value="Edit">
+        }
+    </div>
+}
+<script>
+    var GLOBAL = {};
+    GLOBAL.DotNetReference = null;
+    GLOBAL.SetDotnetReference = function (pDotNetReference) {
+        GLOBAL.DotNetReference = pDotNetReference;
+    };
+    var hPlayer = document.getElementById('hPlayer');
+    var playBut = document.getElementById('playBut');
+    var cutBut = document.getElementById('cutBut');
+    var previous;
+    var playback = () => {
+        var startValue = document.getElementsByClassName('k-draghandle k-draghandle-start')[0].getAttribute('aria-valuenow');
+        var endValue = document.getElementsByClassName('k-draghandle k-draghandle-end')[0].getAttribute('aria-valuenow');
+            if (hPlayer.currentTime >= endValue) {
+                hPlayer.pause();
+                hPlayer.currentTime = startValue;
+                playBut.value = "Play";
+                hPlayer.removeEventListener('timeupdate', this, true);
+            }
+         }
+
+        cutBut.addEventListener('click', function () {
+            var startValue = document.getElementsByClassName('k-draghandle k-draghandle-start')[0].getAttribute('aria-valuenow');
+            var endValue = document.getElementsByClassName('k-draghandle k-draghandle-end')[0].getAttribute('aria-valuenow');
+            GLOBAL.DotNetReference.invokeMethodAsync('Cut', parseInt(startValue), parseInt(endValue));
+        });
+        playBut.addEventListener('click', function () {
+            var startValue = document.getElementsByClassName('k-draghandle k-draghandle-start')[0].getAttribute('aria-valuenow');
+
+            if (hPlayer.currentTime < startValue) {
+                hPlayer.currentTime = startValue;
+                hPlayer.removeEventListener('timeupdate', playback, true);
+            }
+
+            if (previous != startValue) {
+                hPlayer.currentTime = startValue;
+            }
+
+            hPlayer.addEventListener('timeupdate', playback);
+            if (hPlayer.paused) {
+                hPlayer.play();
+                playBut.value = "Pause";
+            }
+            else {
+                hPlayer.pause();
+                playBut.value = "Play";
+                hPlayer.removeEventListener('timeupdate', playback, true);
+            }
+            previous = startValue;       
+        }, false);
+
+
+
+</script>

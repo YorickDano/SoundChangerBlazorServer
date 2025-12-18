@@ -1,0 +1,91 @@
+﻿@using SoundChangerBlazorServer.Services.Interfaces
+
+@inject GeniusService GeniusService
+@inject StateContainer StateContainer;
+
+@code {
+    [Parameter]
+    public PageData _pData { get; set; }
+
+    [Parameter]
+    public IAudioService AudioService { get; set; }
+
+    [Parameter]
+    public IJSRuntime JSRuntime { get; set; }
+
+    public async Task MoveToVisualisation()
+    {
+        var audioFile = await AudioService.GetCurrentFile();
+        var hash = audioFile.GetHashCode();
+        if (!StateContainer.ObjectTunnel.ContainsKey(hash))
+        {
+            StateContainer.ObjectTunnel.Add(hash, audioFile);
+        }
+        await JSRuntime.InvokeVoidAsync("open", $"/visualizer/{hash}", "_blank");
+    }
+
+    private bool isModalVisible = false;
+    private string? currentLyrics;
+
+    public async Task GetLyrics()
+    {
+        if (string.IsNullOrEmpty(StateContainer.Token))
+        {
+            await GeniusService.Authorize();
+        }
+        else
+        {
+            await UpdateData();
+            if (string.IsNullOrEmpty(_pData._audioFile.Lyrics))
+            {
+                currentLyrics = await GeniusService.SerchForLyrics($"{_pData._audioFile.Title}");
+                await AudioService.UpdateLyrics(currentLyrics);
+            }
+            else
+            {
+                currentLyrics = _pData._audioFile.Lyrics;
+            }
+
+            isModalVisible = true;
+        }
+    }
+
+    private async Task Download()
+    {
+        var mp3file = await AudioService.ConvertCurrentToMp3();
+        await JSRuntime.InvokeVoidAsync("downloadFileFromFile", mp3file.Title + mp3file.Extension, mp3file.AudioPath);
+    }
+
+    private async Task UpdateData()
+    {
+        _pData._audioFile = await AudioService.GetCurrentFile();
+        _pData._audioFiles = await AudioService.GetList();
+        _pData.Loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+}
+<TrackLyrics @bind-Show="isModalVisible" LyricsText="@currentLyrics" />
+
+<div id="audioParent" class="sticky-bottom">
+    @if (!string.IsNullOrEmpty(_pData._audioFile.ImageUrl))
+    {
+        <img style="height:50px; width:75px" src="@_pData._audioFile.ImageUrl" />
+    }
+    @_pData._audioFile.Title
+    <br />
+    <audio id="audioPlayer" controls src="\@_pData._audioFile.AudioPath"></audio>
+    <div>
+        Tempo: @_pData._audioFile.Tempo
+        Pitch: @_pData._audioFile.Pitch
+        Rate: @_pData._audioFile.Rate
+        <input class="btn btn-primary w-10" @onclick="MoveToVisualisation" value="Visualisation" />
+        <input class="btn btn-primary w-10" @onclick="GetLyrics" value="Lyrics" />
+        <a class="btn btn-primary w-10" href="/cutter">Cutter</a>
+        <input class="btn btn-primary w-10" @onclick="Download" value="Download" />
+    </div>
+</div>
+
+<script>
+    var audioPlayer = document.getElementById('audioPlayer');
+    audioPlayer.volume = 0.3;
+</script>

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
 using SoundChangerBlazorServer.Models;
+using SoundChangerBlazorServer.Services.Enums;
 
 namespace SoundChangerBlazorServer.Services.Interfaces
 {
@@ -15,9 +16,14 @@ namespace SoundChangerBlazorServer.Services.Interfaces
         Task<AudioFile> FindFile(string title);
         Task ReturnToOrigin();
         Task ReturnTo(int id);
+        Task Delete(int id);
         Task DeleteAllAsync();
         Task ReturnToPrevious();
         Task UpdateImageUrl(string imgUrl);
         Task UpdateLyrics(string lyrics);
+        Task UpdateCurrentToLast();
+        Task AddAudio(AudioFile audio);
+        Task<AudioFile> ConvertCurrentToMp3();
+        Task<double> GetAllSize(SizeType type = SizeType.Megabyte);
     }
 }
