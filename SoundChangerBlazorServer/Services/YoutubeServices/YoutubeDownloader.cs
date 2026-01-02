@@ -16,12 +16,13 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
         private readonly string BasePlaylistUrl;
         private readonly string WebRootPath;
 
-        public YoutubeDownloader(IOptions<YoutubeApiSettings> youtubeOptions, IWebHostEnvironment hostEnvironment,
-                                 IOptions<YoutubeDownloaderSettings> youtubeDownloadSettings, IHttpClientFactory clientFactory)
+        public YoutubeDownloader(IConfiguration configuration, IWebHostEnvironment hostEnvironment,
+                                 IOptions<YoutubeDownloaderSettings> youtubeDownloadSettings)
         {
             _youTubeService = new YouTubeService(new BaseClientService.Initializer()
             {
-                ApiKey = youtubeOptions.Value.ApiKey
+                ApiKey = configuration["YoutubeApiSettings:ApiKey"],
+                ApplicationName = "YouTubeMusicApp"
             });
             BaseVideoUrl = youtubeDownloadSettings.Value.BaseVideoUrl;
             BasePlaylistUrl = youtubeDownloadSettings.Value.BasePlaylistUrl;
@@ -34,6 +35,7 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
 
         public async Task<(YoutubeVideo?, string)> Download(string videoId)
         {
+            var video = await GetVideo(videoId);
             var result = await _youtubeDL.RunAudioDownload(BaseVideoUrl + videoId, YoutubeDLSharp.Options.AudioConversionFormat.Wav);
             var directoryInfo = new DirectoryInfo(WebRootPath);
             var file = directoryInfo.GetFiles()
@@ -44,8 +46,6 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
                 return (null, string.Empty);
             }
 
-            var video = await GetVideo(videoId);
-
             return (video, file!.FullName);
         }
 
@@ -53,7 +53,7 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
         {
             var search = _youTubeService.Videos.List("snippet");
             search.Id = id;
-            var res = await search.ExecuteAsync();
+           var res = await search.ExecuteAsync();
 
             return new YoutubeVideo()
             {
@@ -69,7 +69,6 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
         {
             var search = _youTubeService.Search.List("snippet");
             search.Q = query;
-            search.MaxResults = 20;
 
             var response = await search.ExecuteAsync();
 

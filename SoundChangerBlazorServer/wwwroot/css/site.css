@@ -697,20 +697,7 @@ input, select {
     transition: var(--transition);
 }
 
-audio {
-    width: 100%;
-    margin: 5px 0;
-    border-radius: 30px;
-    height: 40px;
-}
 
-.audio-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-bottom: 20px;
-    align-items: center;
-}
 
 .container.sample {
     background: rgba(255, 255, 255, 0.1);
@@ -793,7 +780,6 @@ audio {
 /* Modern Audio Player Styles */
 .audio-player {
     width: 100%;
-    max-width: 400px;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border-radius: 20px;
@@ -801,6 +787,7 @@ audio {
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     margin: 15px 0;
+    height: 85px;
 }
 
     .audio-player audio {
@@ -811,28 +798,28 @@ audio {
     }
 
     /* Custom audio player styling */
-    .audio-player::-webkit-media-controls-panel {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 25px;
-    }
+audio::-webkit-media-controls-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 25px;
+}
 
-    .audio-player::-webkit-media-controls-play-button {
-        background-color: #fff;
-        border-radius: 50%;
-    }
+audio::-webkit-media-controls-play-button {
+    background-color: #fff;
+    border-radius: 50%;
+}
 
-    .audio-player::-webkit-media-controls-current-time-display,
-    .audio-player::-webkit-media-controls-time-remaining-display {
-        color: white;
-        font-weight: 500;
-    }
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+    color: white;
+    font-weight: 500;
+}
 
-    .audio-player::-webkit-media-controls-timeline {
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.2);
-    }
+audio::-webkit-media-controls-timeline {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.2);
+}
 
-    .audio-player::-webkit-media-controls-volume-slider {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 10px;
-    }
+audio::-webkit-media-controls-volume-slider {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}

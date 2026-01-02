@@ -1,17 +1,15 @@
 ﻿@page "/"
 @page "/{id}/{url}"
 @page "/home"
+@using Microsoft.AspNetCore.Identity
 @using SoundChangerBlazorServer.Models.YoutubeModels;
 @using SoundChangerBlazorServer.Services;
 @using SoundChangerBlazorServer.Services.Interfaces;
 
-@inject IJSRuntime JSRuntime;
 @inject IAudioService AudioService;
-@inject SpotifyClient SpotifyClient;
 @inject NavigationManager NavigationManager
 @inject IYoutubeDownloader YoutubeDownloader;
-@inject GeniusService GeniusService;
-
+ 
 <PageTitle>Index</PageTitle>
 
 <script src="js/scripts.js"></script>
@@ -30,7 +28,7 @@
 
             <div class="file-input-container">
                 <label class="file-input-label">
-                    <span class="file-input-text-line">Choose file or drag & drop here</span>
+                    <span class="file-input-text-line">Choose file</span>
                     <InputFile class="file-input" OnChange="@FileInput" />
                 </label>
             </div>
@@ -52,29 +50,7 @@
             </div>
 
             <div class="or-separator">OR</div>
-
-            @if (!SpotifyClient.IsAuthorized)
-            {
-                <div id="SpotifyAut">
-                    <button @onclick="SpotifyConnect" class="btn btn-primary">Authorize Spotify</button>
-                </div>
-            }
-            @if (SpotifyClient.IsAuthorized)
-            {
-                <div id="spotifyPartial">
-                    <div>Search in spotify</div>
-                    <input placeholder="Enter title"
-                           @bind-value="@_pData.SpotifySearch"
-                           @bind-value:event="oninput" type="text" />
-                    <select name="number"
-                            @bind-value="@_pData.SpotifySearchType"
-                            @bind-value:event="oninput">
-                        <option value="track">Track</option>
-                        <option value="playlist">Playlist</option>
-                    </select>
-                    <button @onclick="SearchSpotify" class="btn btn-primary">Search</button>
-                </div>
-            }
+            
             <br />
             @if (_pData.Videos != null)
             {
@@ -193,7 +169,7 @@
                         <div id="audioParent">
                             @file.Title
                             <br />
-                            <audio volume="0.3" controls src="@file.AudioPath"></audio>
+                            <audio class="audio-player" controls src="@file.AudioPath"></audio>
                             <div>
                                 Tempo: @file.Tempo
                                 Pitch: @file.Pitch
@@ -217,56 +193,10 @@
 @if (_pData._audioFile.Created)
 {
     <AudioPlayer _pData="_pData" 
-                 AudioService="AudioService" 
-                 JSRuntime="JSRuntime" ></AudioPlayer>
+                 AudioService="AudioService" ></AudioPlayer>
 }
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-
-        const fileInput = document.querySelector('.file-input-container');
-
-        if (fileInput) {
-            // Drag and drop events
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                fileInput.addEventListener(eventName, preventDefaults, false);
-            });
-
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                fileInput.addEventListener(eventName, highlight, false);
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                fileInput.addEventListener(eventName, unhighlight, false);
-            });
-
-            function highlight() {
-                fileInput.classList.add('drag-over');
-            }
-
-            function unhighlight() {
-                fileInput.classList.remove('drag-over');
-            }
-
-            fileInput.addEventListener('drop', handleDrop, false);
-
-            function handleDrop(e) {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                if (files.length > 0) {
-                    fileInput.files = files;
-                    // Trigger change event
-                    const event = new Event('change', { bubbles: true });
-                    fileInput.dispatchEvent(event);
-                }
-            }
-        }
-    });
     window.downloadFileFromFile = async (fileName, url) => {
         const link = document.createElement('a');
         link.href = url;
@@ -300,7 +230,7 @@
         }
         if (_pData.Videos != null && _pData.Videos.Any())
         {
-            await AudioService.UpdateImageUrl(_pData.Videos.FirstOrDefault(x => x.Id == id)?.ImgUrl);
+            await AudioService.UpdateImageUrl(_pData.Videos.FirstOrDefault(x => x.Id == id)!.ImgUrl);
         }
         else if (imageUrl != null)
         {
@@ -325,59 +255,6 @@
         }
 
         await UpdateData();
-    }
-
-    private async Task SpotifyConnect()
-    {
-        var url = await SpotifyClient.Authorize();
-        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
-        StateHasChanged();
-    }
-
-    private async Task SearchSpotify()
-    {
-        _pData.Loading = true;
-        _pData.SpotifySearchType ??= "track";
-
-        if (string.IsNullOrEmpty(_pData.SpotifySearch))
-        {
-            _pData.AlertMessage = "Enter something to search";
-            _pData.IsAlertMessage = true;
-            _pData.Loading = false;
-            return;
-        }
-
-        var res = await SpotifyClient.SearchFor(_pData.SpotifySearch, Enum.Parse<SpotifyTypes>(_pData.SpotifySearchType));
-
-        switch (_pData.SpotifySearchType)
-        {
-            case "playlist":
-                {
-                    if (res.playlists == null)
-                    {
-                        break;
-                    }
-                    var playlistId = res.playlists.items[0].id;
-                    var tracks = await SpotifyClient.ConvertPlaylist(playlistId);
-                    _pData.Tracks = tracks.Select(x => new Track() { Title = x.track.name, Author = x.track.artists[0].name, ImgUrl = x.track.album.images[1].url });
-                    break;
-                }
-            case "track":
-                {
-                    if (res.tracks == null)
-                    {
-                        break;
-                    }
-
-                    var trackId = res.tracks.items[0].id;
-                    var track = await SpotifyClient.ConvertTrack(trackId);
-                    _pData.Tracks = new Track[] { new Track() { Title = track.name, Author = track.artists[0].name, ImgUrl = track.album.images[1].url } };
-                    break;
-                }
-        }
-
-        _pData.TracksHide = false;
-        _pData.Loading = false;
     }
 
     private async Task ReturnToOrigin()

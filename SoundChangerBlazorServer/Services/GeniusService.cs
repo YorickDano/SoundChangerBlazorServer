@@ -30,7 +30,7 @@ namespace SoundChangerBlazorServer.Services
         {
             var request = new RestRequest("search", Method.Get);
             request.AddParameter("q", title);
-            request.AddParameter("access_token", _stateContainer.Token);
+            request.AddParameter("access_token", _stateContainer.GeniusToken);
             var response = await _client.ExecuteAsync(request);
             try
             {

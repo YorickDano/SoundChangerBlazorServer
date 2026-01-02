@@ -1,0 +1,303 @@
+﻿@page "/test";
+
+@using SoundChangerBlazorServer.Models.YoutubeModels
+@using SoundChangerBlazorServer.Services.Interfaces
+
+
+@inject IAudioService _audioService;
+@inject IYoutubeDownloader _youtubeDownloader;
+@inject UserService _userService;
+@inject StateContainer _stateContainer;
+
+@code {
+
+
+    string[] tracksToPlay = { "Полматери простая замечательная жизнь", "Марафонец смешарики", "juice daryana" };
+    string playListToPlay = "era Nikita Levdanskii";
+    string playListPostfix = "_YoutubePlaylist";
+    List<AudioFile> files = new List<AudioFile>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var testFiles = await _audioService.GetTestList();
+            if (testFiles.Count() == 0)
+            {
+                await LoadData();
+            }
+            else
+            {
+                files.AddRange(testFiles);
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    protected async Task LoadData()
+    {
+        var userId = _userService.GetCurrentUserId();
+        var playlist = await _youtubeDownloader.GetPlaylistAsync(playListToPlay);
+        playlist.Videos = playlist.Videos.Shuffle();
+        _stateContainer.ObjectContainer.Add($"{userId}{playListPostfix}", (playlist, videosTaken: 5));   
+        var downloads = await Download(playlist.Videos.Take(5).Select(x => x.Id));
+        await AddToAudioService(downloads.Select(x => x.Path));
+        await _audioService.TestChange();
+        files.AddRange(await _audioService.GetTestList());
+    }
+
+    private async Task LoadMore()
+    {
+        var userId = _userService.GetCurrentUserId();
+        var objectId = $"{userId}{playListPostfix}";
+        if (_stateContainer.ObjectContainer.TryGetValue(objectId, out object value))
+        {
+            var plInfo = ((YoutubePlaylist playlist, int videosTaken)) value;
+            var downloads = await Download(plInfo.playlist.Videos.Skip(plInfo.videosTaken).Take(5).Select(x => x.Id));
+            plInfo.videosTaken += 5;
+            _stateContainer.ObjectContainer[objectId] = plInfo;
+            await AddToAudioService(downloads.Select(x => x.Path));
+            await _audioService.TestChange();
+            files.Clear();
+            files.AddRange(await _audioService.GetTestList());
+        }
+
+    }
+
+    private async Task AddToAudioService(IEnumerable<string> pathes)
+    {
+        foreach (var path in pathes)
+        {
+            await _audioService.AddAudio(AudioFile.Init(path));
+        }
+    }
+
+    private async Task<IEnumerable<(YoutubeVideo Video, string Path)>> Download(IEnumerable<string> ids)
+    {
+        var downloadsTasks = ids.Select(async x => await _youtubeDownloader.Download(x));
+        return await Task.WhenAll(downloadsTasks);
+    }
+}
+
+
+<h3>Test</h3>
+@if (files.Count > 0)
+{
+    <button class="btn-primary" id="playBtn">Play</button>
+    <button class="btn-primary" id="loadMoreBtn" @onclick="LoadMore">Load More</button>
+    <br />
+    @for (var i = 0; i < files.Count; ++i)
+    {
+        var file = files[i];
+        @file.Title
+        <audio class="audio-player" controls src="@file.AudioPath"></audio>
+    }
+}
+
+<script>
+    function waitForElements(selector, callback) {
+        // Check immediately if elements exist
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+            callback(elements);
+            return;
+        }
+
+        // Set up a MutationObserver to watch for new elements
+        const observer = new MutationObserver((mutations, obs) => {
+            const foundElements = document.querySelectorAll(selector);
+            if (foundElements.length > 0) {
+                callback(foundElements);
+                obs.disconnect(); // Stop observing once elements are found
+            }
+        });
+
+        // Start observing
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    // Function to wait for all audio elements to load
+    function waitForAllAudiosLoaded(audioElements) {
+        const loadPromises = Array.from(audioElements).map((audio, index) => {
+            return new Promise((resolve, reject) => {
+                // If already loaded
+                if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+                    resolve({
+                        element: audio,
+                        index: index,
+                        src: audio.src,
+                        loaded: true
+                    });
+                    return;
+                }
+
+                // Set up event listeners
+                const onCanPlay = () => {
+                    resolve({
+                        element: audio,
+                        index: index,
+                        src: audio.src,
+                        loaded: true
+                    });
+                    cleanup();
+                };
+
+                const onError = (error) => {
+                    reject({
+                        element: audio,
+                        index: index,
+                        src: audio.src,
+                        error: error,
+                        loaded: false
+                    });
+                    cleanup();
+                };
+
+                const cleanup = () => {
+                    audio.removeEventListener('canplaythrough', onCanPlay);
+                    audio.removeEventListener('error', onError);
+                };
+
+                audio.addEventListener('canplaythrough', onCanPlay, { once: true });
+                audio.addEventListener('error', onError, { once: true });
+            });
+        });
+
+        return Promise.allSettled(loadPromises).then(results => {
+            const loaded = results
+                .filter(r => r.status === 'fulfilled')
+                .map(r => r.value);
+
+            const errors = results
+                .filter(r => r.status === 'rejected')
+                .map(r => r.reason);
+
+            return {
+                allElements: loaded.map(l => l.element),
+                loaded: loaded,
+                errors: errors
+            };
+        });
+    }
+
+    // Usage
+    document.addEventListener('DOMContentLoaded', () => {
+        waitForElements('.audio-player', (audioElements) => {
+            console.log(`Found ${audioElements.length} audio elements`);
+            const playBtn = document.getElementById('playBtn');
+            playBtn.addEventListener('click', () => {
+                waitForAllAudiosLoaded(audioElements).then(result => {
+                    console.log(`Successfully loaded: ${result.loaded.length}`);
+                    console.log(`Failed: ${result.errors.length}`);
+
+                    // Now you have an array of all loaded audio elements
+                    const audioArray = result.allElements;
+                    console.log('Audio array:', audioArray);
+
+                    // Do something with the array
+                    processAudioArray(audioArray);
+                });
+            });
+            
+        });
+    });
+
+    function processAudioArray(audioArray) {
+        const simpleQueue = createSimpleAudioQueue(audioArray);
+        simpleQueue.play(0);
+    }
+
+        function createSimpleAudioQueue(audioArray) {
+        let currentIndex = -1;
+        let isPlaying = false;
+
+        function playNext() {
+            if (currentIndex + 1 < audioArray.length) {
+                currentIndex++;
+                const audio = audioArray[currentIndex];
+
+                // Remove previous ended listener
+                const currentAudio = audioArray[currentIndex - 1];
+                if (currentAudio) {
+                    currentAudio.onended = null;
+                }
+
+                // Set up ended event for current audio
+                audio.onended = () => {
+                    console.log(`Audio ${currentIndex} finished, playing next`);
+                    playNext();
+                };
+
+                audio.play().then(() => {
+                    isPlaying = true;
+                    console.log(`Now playing audio ${currentIndex + 1} of ${audioArray.length}`);
+                }).catch(error => {
+                    console.error(`Failed to play audio ${currentIndex}:`, error);
+                    playNext(); // Skip to next on error
+                });
+            } else {
+                console.log('Queue finished');
+                currentIndex = -1;
+                isPlaying = false;
+            }
+        }
+
+        return {
+            play: function(startIndex = 0) {
+                if (startIndex >= audioArray.length) return;
+
+                // Stop current playback
+                if (currentIndex >= 0) {
+                    audioArray[currentIndex].pause();
+                    audioArray[currentIndex].currentTime = 0;
+                }
+
+                currentIndex = startIndex - 1; // playNext will increment
+                playNext();
+            },
+
+            pause: function() {
+                if (currentIndex >= 0) {
+                    audioArray[currentIndex].pause();
+                    isPlaying = false;
+                }
+            },
+
+            resume: function() {
+                if (currentIndex >= 0 && !isPlaying) {
+                    audioArray[currentIndex].play().then(() => {
+                        isPlaying = true;
+                    });
+                }
+            },
+
+            stop: function() {
+                if (currentIndex >= 0) {
+                    audioArray[currentIndex].pause();
+                    audioArray[currentIndex].currentTime = 0;
+                    currentIndex = -1;
+                    isPlaying = false;
+                }
+            },
+
+            next: function() {
+                if (currentIndex >= 0) {
+                    audioArray[currentIndex].pause();
+                    audioArray[currentIndex].currentTime = 0;
+                    playNext();
+                }
+            },
+
+            getCurrentIndex: function() {
+                return currentIndex;
+            },
+
+            isPlaying: function() {
+                return isPlaying;
+            }
+        };
+    }
+</script>

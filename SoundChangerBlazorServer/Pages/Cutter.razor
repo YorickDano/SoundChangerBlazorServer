@@ -4,7 +4,7 @@
 <h3>Cutter</h3>
 
 @inject CutterService CutterService;
-@inject IWebHostEnvironment _environment;
+@inject IWebHostEnvironment Environment;
 @inject IJSRuntime JSRuntime;
 @inject NavigationManager NavigationManager
 @inject IAudioService AudioService;
@@ -24,7 +24,7 @@
         }
 
         End = _currentFile.Duration.TotalSeconds;
-        Cutters = (await FileUtils.GetAllFilesContains(_environment.WebRootPath, $"{nameof(Cutter)}"))
+        Cutters = (await FileUtils.GetAllFilesContains(Environment.WebRootPath, $"{nameof(Cutter)}"))
                     .Select(x => AudioFile.Init(x))
                     .ToList();
 

@@ -13,6 +13,7 @@ namespace SoundChangerBlazorServer.Services.Interfaces
         bool Any();
         Task<AudioFile> GetCurrentFile();
         Task<IEnumerable<AudioFile>> GetList();
+        Task<IEnumerable<AudioFile>> GetTestList();
         Task<AudioFile> FindFile(string title);
         Task ReturnToOrigin();
         Task ReturnTo(int id);
@@ -25,5 +26,7 @@ namespace SoundChangerBlazorServer.Services.Interfaces
         Task AddAudio(AudioFile audio);
         Task<AudioFile> ConvertCurrentToMp3();
         Task<double> GetAllSize(SizeType type = SizeType.Megabyte);
+        Task Update();
+        Task TestChange();
     }
 }

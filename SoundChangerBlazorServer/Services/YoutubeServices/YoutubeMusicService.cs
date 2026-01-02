@@ -1,33 +1,34 @@
-﻿using Google.Apis.Auth.OAuth2;
-using Google.Apis.Services;
+﻿using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using SoundChangerBlazorServer.Services.Interfaces;
 
 namespace SoundChangerBlazorServer.Services.YoutubeServices
 {
     public class YoutubeMusicService
     {
-        private YouTubeService _youtubeService;
         private readonly IConfiguration _configuration;
-        private readonly NavigationManager _navigationManager;
         private readonly IJSRuntime _jsRuntime;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ITokenStorageService _tokenStorageService;
+        private YouTubeService _youtubeService;
+        private readonly UserService _userService;
 
         public bool IsAuthorized { get; private set; } = false;
 
         public YoutubeMusicService(IConfiguration configuration, NavigationManager navigationManager,
-                                   IJSRuntime jSRuntime, IHttpContextAccessor httpContextAccessor)
+                                   IJSRuntime jSRuntime, IHttpContextAccessor httpContextAccessor,
+                                   ITokenStorageService tokenStorageService, UserService userService)
         {
+            _configuration = configuration;
+            _jsRuntime = jSRuntime;
+            _tokenStorageService = tokenStorageService;
+            _userService = userService;
             _youtubeService = new YouTubeService(new BaseClientService.Initializer()
             {
-                ApiKey = configuration["YouTube:ApiKey"],
+                ApiKey = configuration["YoutubeApiSettings:ApiKey"],
                 ApplicationName = "YouTubeMusicApp"
             });
-            _configuration = configuration;
-            _navigationManager = navigationManager;
-            _jsRuntime = jSRuntime;
-            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task Authorize()
@@ -49,7 +50,7 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
                 searchRequest.VideoCategoryId = "10";
                 searchRequest.PageToken = nextPageToken;
                 searchRequest.MaxResults = maxResults;
-                searchRequest.AccessToken = _httpContextAccessor.HttpContext!.Session.GetString("YouTubeAccessToken");
+                searchRequest.AccessToken = (await _tokenStorageService.GetTokensAsync(_userService.GetCurrentUserId())).AccessToken;
 
                 var searchResponse = await searchRequest.ExecuteAsync();
 
@@ -82,7 +83,7 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
             var parameters = new Dictionary<string, string>
             {
                 ["client_id"] = _configuration["Google:ClientId"]!,
-                ["redirect_uri"] = _configuration["Google:Callback"]!,
+                ["redirect_uri"] = _configuration["Google:RedirectUri"]!,
                 ["scope"] = _configuration["Google:Scope"]!,
                 ["response_type"] = "code",
                 ["prompt"] = "consent",

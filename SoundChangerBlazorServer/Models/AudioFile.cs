@@ -20,6 +20,7 @@ namespace SoundChangerBlazorServer.Models
         public double Rate { get; set; } = 1;
         public TimeSpan Duration { get; set; }
         public long Size { get; set; }
+        public bool IsChanged { get; set; } = false;
 
         public string FilePath
         {

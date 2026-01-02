@@ -1,0 +1,103 @@
+﻿@page "/oauthcallback"
+
+@using Newtonsoft.Json
+@using SoundChangerBlazorServer.Services.Interfaces
+@using System.Web
+@using System.Security.Claims
+
+@code {
+    [Inject] private ITokenStorageService TokenStorage { get; set; }
+    [Inject] private NavigationManager Navigation { get; set; }
+    [Inject] private IConfiguration Configuration { get; set; }
+    [Inject] private UserService UserService { get; set; }
+
+    private string _status = "Processing authentication...";
+    private bool _isError = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) 
+    {
+        try
+        {
+            var userId = UserService.GetCurrentUserId();
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            var query = HttpUtility.ParseQueryString(uri.Query);
+            var code = query["code"];
+            var error = query["error"];
+
+            if (!string.IsNullOrEmpty(error))
+            {
+                _status = $"Authentication error: {error}";
+                _isError = true;
+                return;
+            }
+
+            if (string.IsNullOrEmpty(code))
+            {
+                _status = "No authorization code received";
+                _isError = true;
+                return;
+            }
+
+            var tokens = await ExchangeCodeForTokensAsync(code);
+
+            await TokenStorage.StoreTokensAsync(
+                userId,
+                tokens.AccessToken,
+                tokens.RefreshToken,
+                DateTime.UtcNow.AddSeconds(tokens.ExpiresIn)
+            );
+
+            _status = "Authentication successful! Redirecting...";
+
+            Navigation.NavigateTo("/youtubemusic", true);
+        }
+        catch (Exception ex)
+        {
+            _status = $"Error: {ex.Message}";
+            _isError = true;
+        }
+    }
+
+    private async Task<TokenResponse> ExchangeCodeForTokensAsync(string code)
+    {
+        using var httpClient = new HttpClient();
+        var redirectUri = Configuration["Google:RedirectUri"] ?? throw new InvalidOperationException("Google:RedirectUri is not configured.");
+        var clientId = Configuration["Google:ClientId"] ?? throw new InvalidOperationException("Google:ClientId is not configured.");
+        var clientSecret = Configuration["Google:ClientSecret"] ?? throw new InvalidOperationException("Google:ClientSecret is not configured.");
+
+        var tokenRequest = new Dictionary<string, string>
+        {
+            ["code"] = code,
+            ["client_id"] = clientId,
+            ["client_secret"] = clientSecret,
+            ["redirect_uri"] = redirectUri,
+            ["grant_type"] = "authorization_code",
+            ["access_type"] = "offline",
+            ["prompt"] = "consent"
+        };
+
+        var response = await httpClient.PostAsync(Configuration["Google:TokenUrl"],
+            new FormUrlEncodedContent(tokenRequest));
+
+        response.EnsureSuccessStatusCode();
+        var token = JsonConvert.DeserializeObject<TokenResponse>(await response.Content.ReadAsStringAsync());
+
+        return token!;
+    }
+
+    private class TokenResponse
+    {
+        [JsonProperty("access_token")]
+        public string AccessToken { get; set; }
+        [JsonProperty("expires_in")]
+        public int ExpiresIn { get; set; }
+        [JsonProperty("refresh_token")]
+        public string RefreshToken { get; set; }
+        [JsonProperty("scope")]
+        public string Scope { get; set; }
+        [JsonProperty("token_type")]
+        public string TokenType { get; set; }
+        [JsonProperty("refresh_token_expires_in")]
+        public int RefreshTokenExpiresIn { get; set; }
+    }
+}

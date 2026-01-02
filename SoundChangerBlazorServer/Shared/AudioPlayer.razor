@@ -2,6 +2,7 @@
 
 @inject GeniusService GeniusService
 @inject StateContainer StateContainer;
+@inject IJSRuntime JSRuntime;
 
 @code {
     [Parameter]
@@ -9,9 +10,6 @@
 
     [Parameter]
     public IAudioService AudioService { get; set; }
-
-    [Parameter]
-    public IJSRuntime JSRuntime { get; set; }
 
     public async Task MoveToVisualisation()
     {
@@ -29,7 +27,7 @@
 
     public async Task GetLyrics()
     {
-        if (string.IsNullOrEmpty(StateContainer.Token))
+        if (string.IsNullOrEmpty(StateContainer.GeniusToken))
         {
             await GeniusService.Authorize();
         }
@@ -73,7 +71,7 @@
     }
     @_pData._audioFile.Title
     <br />
-    <audio id="audioPlayer" controls src="\@_pData._audioFile.AudioPath"></audio>
+    <audio id="audioPlayer" class="audio-player" controls src="\@_pData._audioFile.AudioPath"></audio>
     <div>
         Tempo: @_pData._audioFile.Tempo
         Pitch: @_pData._audioFile.Pitch

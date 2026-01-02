@@ -5,9 +5,10 @@
 @using System.Text
 
 @inject YoutubeMusicService _musicService;
-@inject IHttpContextAccessor _httpContextAccessor;
-@inject NavigationManager _navigationManager
-@inject INextPageTokenService _nextPageTokenService
+@inject NavigationManager _navigationManager;
+@inject INextPageTokenService _nextPageTokenService;
+@inject ITokenStorageService _tokenStorage;
+@inject UserService _userService;
 
 @code {
     private const string SavedTracksPath = "Tracks.json";
@@ -19,11 +20,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (_httpContextAccessor.HttpContext!.Session.Keys.Count() == 0 || !_httpContextAccessor.HttpContext!.Session.Keys.Contains("YouTubeAccessToken"))
+        var token = await _tokenStorage.GetTokensAsync(_userService.GetCurrentUserId());
+        if (token.AccessToken == null)
         {
             await _musicService.Authorize();
         }
-        if (_httpContextAccessor.HttpContext.Session.Keys.Contains("YouTubeAccessToken"))
+        if (token.AccessToken != null)
         {
 
             var allTracks = await GetSavedTracksFromFile();
@@ -140,7 +142,7 @@
         var video = Tracks.ElementAt(i);
 
         <div class="track-card">
-            <a href="https://www.youtube.com/watch?v=@video.Id" class="text-decoration-none">
+            <a href="@ExternalUrls.YouTubeVideo(video.Id)" class="text-decoration-none">
                 <img class="imgTrackCard" src="@video.ThumbnailUrl">
                 <div class="track-card-text">@(video.Title + " " + video.ChannelTitle)</div>
             </a>
