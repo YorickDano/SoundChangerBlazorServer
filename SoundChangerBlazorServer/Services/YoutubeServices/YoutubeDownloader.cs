@@ -3,7 +3,9 @@ using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.Options;
 using SoundChangerBlazorServer.Models.YoutubeModels;
 using SoundChangerBlazorServer.Services.Interfaces;
+using SoundChangerBlazorServer.Utils;
 using YoutubeDLSharp;
+using YoutubeDLSharp.Options;
 
 namespace SoundChangerBlazorServer.Services.YoutubeServices
 {
@@ -36,7 +38,14 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
         public async Task<(YoutubeVideo?, string)> Download(string videoId)
         {
             var video = await GetVideo(videoId);
-            var result = await _youtubeDL.RunAudioDownload(BaseVideoUrl + videoId, YoutubeDLSharp.Options.AudioConversionFormat.Wav);
+            var options = new OptionSet
+            {
+                Output = Path.Combine(WebRootPath, "%(id)s.%(ext)s"),
+                Format = "bestaudio/best",
+                ExtractAudio = true,
+                AudioFormat = AudioConversionFormat.Wav
+            };
+            var result = await _youtubeDL.RunAudioDownload(BaseVideoUrl + videoId, AudioConversionFormat.Wav, overrideOptions: options);
             var directoryInfo = new DirectoryInfo(WebRootPath);
             var file = directoryInfo.GetFiles()
                                     .FirstOrDefault(f => f.Name.Contains(videoId));

@@ -40,7 +40,6 @@ builder.Services.AddIgniteUIBlazor(typeof(IgbSliderModule));
 builder.Services.AddSyncfusionBlazor();
 builder.Services.AddSingleton<IClearService, ClearService>();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddTelerikBlazor();
 builder.Services.AddScoped<YoutubeMusicService>();
 builder.Services.AddHttpContextAccessor();
 

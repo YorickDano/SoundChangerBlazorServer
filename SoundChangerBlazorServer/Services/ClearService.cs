@@ -18,7 +18,11 @@ namespace SoundChangerBlazorServer.Services
             {
                 foreach (var file in new[] { "*.wav", "*.mp3" }.SelectMany(directoryInfo.EnumerateFiles))
                 {
-                    file.Delete();
+                    try
+                    {
+                        file.Delete();
+                    }
+                    finally { }
                 }
                 File.Delete("Tracks.json");
             });

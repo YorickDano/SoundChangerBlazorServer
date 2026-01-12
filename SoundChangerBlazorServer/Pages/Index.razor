@@ -49,8 +49,6 @@
                 <button @onclick="SearchYoutube" class="btn btn-primary">Search</button>
             </div>
 
-            <div class="or-separator">OR</div>
-            
             <br />
             @if (_pData.Videos != null)
             {
@@ -85,7 +83,7 @@
 
                     <div class="container sample center">
                         <span>Tempo</span>
-                        <IgbSlider Change=OnChangeTempo Max="2"
+                        <IgbSlider Change=OnChangeTempo Max="2.01"
                                    Min="0"
                                    Value="_pData._settings.Tempo"
                                    Step="0.01">
@@ -94,7 +92,7 @@
                             <span class="slider-label">Tempo: @_pData._settings.Tempo</span>
                         </div>
                         <span>Pitch</span>
-                        <IgbSlider Change=OnChangePitch Max="2"
+                        <IgbSlider Change=OnChangePitch Max="2.01"
                                    Min="0"
                                    Value="_pData._settings.Pitch"
                                    Step="0.01">
@@ -103,13 +101,31 @@
                             <span class="slider-label">Pitch: @_pData._settings.Pitch</span>
                         </div>
                         <span>Rate</span>
-                        <IgbSlider Change=OnChangeRate Max="2"
+                        <IgbSlider Change=OnChangeRate Max="2.01"
                                    Min="0"
                                    Value="_pData._settings.Rate"
                                    Step="0.01">
                         </IgbSlider>
                         <div class="value-container">
                             <span class="slider-label">Rate: @_pData._settings.Rate</span>
+                        </div>
+                        <span>Volume</span>
+                        <IgbSlider Change=OnChangeVolume Max="10.01"
+                                   Min="0"
+                                   Value="_pData._settings.Volume"
+                                   Step="0.01">
+                        </IgbSlider>
+                        <div class="value-container">
+                            <span class="slider-label">Volume: @_pData._settings.Volume</span>
+                        </div>
+                        <span>Quality</span>
+                        <IgbSlider Change=OnChangeQuality Max="1.01"
+                                   Min="0"
+                                   Value="_pData._settings.Quality"
+                                   Step="0.01">
+                        </IgbSlider>
+                        <div class="value-container">
+                            <span class="slider-label">Quality: @_pData._settings.Quality</span>
                         </div>
                     </div>
                     <button class="btn btn-primary w-100" @onclick="ChangeSound">Change</button>
@@ -313,9 +329,13 @@
     private async Task ChangeSound()
     {
         _pData.Loading = true;
+        _pData._settings.Tempo = Math.Round(_pData._settings.Tempo, 2);
+        _pData._settings.Pitch = Math.Round(_pData._settings.Pitch, 2);
+        _pData._settings.Rate = Math.Round(_pData._settings.Rate, 2);
+        _pData._settings.Volume = Math.Round(_pData._settings.Volume, 2);
+        _pData._settings.Quality = Math.Round(_pData._settings.Quality, 2);
         await AudioService.ChangeSound(_pData._settings);
         await UpdateData();
-
     }
 
     private async Task MixTrack()
@@ -346,6 +366,22 @@
         if (e != null)
         {
             _pData._settings.Rate = e.Detail;
+        }
+    }
+
+    private void OnChangeVolume(IgbNumberEventArgs e)
+    {
+        if (e != null)
+        {
+            _pData._settings.Volume = (float)e.Detail;
+        }
+    }
+
+    private void OnChangeQuality(IgbNumberEventArgs e)
+    {
+        if (e != null)
+        {
+            _pData._settings.Quality = (float)e.Detail;
         }
     }
 

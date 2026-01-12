@@ -1,8 +1,10 @@
 ﻿using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
+using Google.Apis.YouTube.v3.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using SoundChangerBlazorServer.Services.Interfaces;
+using SpotifyAPI.Web;
 
 namespace SoundChangerBlazorServer.Services.YoutubeServices
 {
@@ -16,8 +18,7 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
 
         public bool IsAuthorized { get; private set; } = false;
 
-        public YoutubeMusicService(IConfiguration configuration, NavigationManager navigationManager,
-                                   IJSRuntime jSRuntime, IHttpContextAccessor httpContextAccessor,
+        public YoutubeMusicService(IConfiguration configuration, IJSRuntime jSRuntime,
                                    ITokenStorageService tokenStorageService, UserService userService)
         {
             _configuration = configuration;
@@ -38,11 +39,31 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
             await _jsRuntime.InvokeVoidAsync("open", url, "_blank");
         }
 
+        public async Task<List<YoutubeTrack>> GetMostPolularTracksAsync()
+        {
+            var tracks = new List<YoutubeTrack>();
+
+            try
+            {
+                var searchRequest = _youtubeService.Videos.List("snippet");
+                searchRequest.Chart = VideosResource.ListRequest.ChartEnum.MostPopular;
+                searchRequest.VideoCategoryId = "10";
+                searchRequest.MaxResults = 50;
+                searchRequest.AccessToken = (await _tokenStorageService.GetTokensAsync(_userService.GetCurrentUserId())).AccessToken;
+
+                var searchResponse = await searchRequest.ExecuteAsync();
+
+                return await VideoResponseToTracks(searchResponse);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting recommended tracks: {ex.Message}");
+                throw;
+            }
+        }
 
         public async Task<(List<YoutubeTrack> tracks, string nextPageToken)> GetLikedTracksAsync(string? nextPageToken = null, int maxResults = 10)
         {
-            var recommendedTracks = new List<YoutubeTrack>();
-
             try
             {
                 var searchRequest = _youtubeService.Videos.List("snippet");
@@ -54,28 +75,33 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
 
                 var searchResponse = await searchRequest.ExecuteAsync();
 
-                foreach (var searchResult in searchResponse.Items.Where(i => i.Snippet.CategoryId == "10"))
-                {
-                    var track = new YoutubeTrack
-                    {
-                        Id = searchResult.Snippet.Thumbnails.Default__.Url.Split('/')[^2],
-                        Title = searchResult.Snippet.Title,
-                        ChannelTitle = searchResult.Snippet.ChannelTitle,
-                        ThumbnailUrl = searchResult.Snippet.Thumbnails.Medium?.Url,
-                        PublishedAt = searchResult.Snippet.PublishedAt
-                    };
-
-                    recommendedTracks.Add(track);
-
-                }
-
-                return (recommendedTracks, searchResponse.NextPageToken);
+                return (await VideoResponseToTracks(searchResponse), searchResponse.NextPageToken);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error getting recommended tracks: {ex.Message}");
                 throw;
             }
+        }
+
+        private async Task<List<YoutubeTrack>> VideoResponseToTracks(VideoListResponse response)
+        {
+            var tracks = new List<YoutubeTrack>();
+            foreach (var searchResult in response.Items.Where(i => i.Snippet.CategoryId == "10"))
+            {
+                var track = new YoutubeTrack
+                {
+                    Id = searchResult.Snippet.Thumbnails.Default__.Url.Split('/')[^2],
+                    Title = searchResult.Snippet.Title,
+                    ChannelTitle = searchResult.Snippet.ChannelTitle,
+                    ThumbnailUrl = searchResult.Snippet.Thumbnails.Medium?.Url,
+                    PublishedAt = searchResult.Snippet.PublishedAt
+                };
+
+                tracks.Add(track);
+            }
+
+            return tracks;
         }
 
         private async Task<string> GenerateAuthUrl()

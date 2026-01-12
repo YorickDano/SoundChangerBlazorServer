@@ -1,11 +1,14 @@
-﻿using Microsoft.AspNetCore.Components.Forms;
+﻿using FFmpeg.AutoGen;
+using Microsoft.AspNetCore.Components.Forms;
 using NAudio.MediaFoundation;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using SoundChangerBlazorServer.Models;
 using SoundChangerBlazorServer.Services.Enums;
 using SoundChangerBlazorServer.Services.Interfaces;
+using SoundTouch;
 using SoundTouch.Net.NAudioSupport;
+using System.Diagnostics;
 
 namespace SoundChangerBlazorServer.Services
 {
@@ -38,7 +41,7 @@ namespace SoundChangerBlazorServer.Services
             var audioToRemove = _audioFiles.FirstOrDefault(x => x.Id == id) ?? throw new Exception("Incorrect id!");
             _audioFiles.Remove(audioToRemove);
             File.Delete(audioToRemove.FilePath);
-            _audioFile = _audioFiles.LastOrDefault(new AudioFile());        
+            _audioFile = _audioFiles.LastOrDefault(new AudioFile());
         }
         public async Task<double> GetAllSize(SizeType type = SizeType.Megabyte) => type switch
         {
@@ -54,7 +57,7 @@ namespace SoundChangerBlazorServer.Services
             {
                 _audioFile = _audioFiles.Last();
             }
-        } 
+        }
         public async Task AddAudio(AudioFile audio)
         {
             audio.Id = _audioFiles.Count + 1;
@@ -65,12 +68,11 @@ namespace SoundChangerBlazorServer.Services
 
         public async Task DeleteAllAsync()
         {
-            var directoryInfo = new DirectoryInfo(_hostingEnvironment.WebRootPath);
             await Task.Run(() =>
             {
-                foreach (var file in directoryInfo.GetFiles("*.wav").Where(x => x.Name != _audioFile.FileName))
+                foreach (var file in _audioFiles.Select(x => x.FilePath))
                 {
-                    file.Delete();
+                    File.Delete(file);
                 }
             });
             _audioFiles.Clear();
@@ -97,10 +99,9 @@ namespace SoundChangerBlazorServer.Services
 
         public async Task<bool> FileInput(InputFileChangeEventArgs e)
         {
-            var wwwrootPath = _hostingEnvironment.WebRootPath;
             _audioFile = AudioFile.Init(e);
             _audioFile.Id = _audioFiles.Count + 1;
-            _audioFile.WWWRootPath = wwwrootPath;
+            _audioFile.WWWRootPath = _hostingEnvironment.WebRootPath;
             _audioFile.FileName += _audioFiles.Count;
             _audioFile.Size = e.File.Size;
 
@@ -160,29 +161,26 @@ namespace SoundChangerBlazorServer.Services
             _audioFile = _audioFiles[^1];
 
             return true;
-        }      
+        }
 
         public async Task ChangeSound(SoundTouchSettings settings)
         {
             var newAudioFile = new AudioFile();
             _audioFile.WWWRootPath = _hostingEnvironment.WebRootPath;
             _audioFile.CopyTo(newAudioFile);
-            newAudioFile.FileName = newAudioFile.FileName + $" Tempo-{settings.Tempo}_Pitch-{settings.Pitch}_Rate-{settings.Rate}";
+            newAudioFile.FileName = newAudioFile.FileName + $" T-{settings.Tempo}_P-{settings.Pitch}_R-{settings.Rate}_V-{settings.Volume}_Q-{settings.Quality}";
 
             await Change(_audioFile.FilePath, newAudioFile.FilePath, settings);
 
-            lock (_lock)
-            {
-                newAudioFile.Created = true;
-                newAudioFile.Tempo = settings.Tempo;
-                newAudioFile.Pitch = settings.Pitch;
-                newAudioFile.Rate = settings.Rate;
-                newAudioFile.Size = new FileInfo(newAudioFile.FilePath).Length;
-                newAudioFile.Id = _audioFiles.Count + 1;
-                newAudioFile.IsChanged = true;
-                _audioFiles.Add(newAudioFile);
-                _audioFile = _audioFiles[^1];
-            }
+            newAudioFile.Created = true;
+            newAudioFile.Tempo = settings.Tempo;
+            newAudioFile.Pitch = settings.Pitch;
+            newAudioFile.Rate = settings.Rate;
+            newAudioFile.Size = new FileInfo(newAudioFile.FilePath).Length;
+            newAudioFile.Id = _audioFiles.Count + 1;
+            newAudioFile.IsChanged = true;
+            _audioFiles.Add(newAudioFile);
+            _audioFile = _audioFiles[^1];
         }
 
         public async Task Mix(int seconds = 10)
@@ -295,15 +293,25 @@ namespace SoundChangerBlazorServer.Services
         {
             var mp3File = new AudioFile();
             _audioFile.CopyTo(mp3File);
-            using var fileReader = new WaveFileReader(mp3File.FilePath);
+            var inputWavPath = _audioFile.FilePath;
             mp3File.Extension = ".mp3";
-            var mediaType = MediaFoundationEncoder.SelectMediaType(AudioSubtypes.MFAudioFormat_MP3,
-                            fileReader.WaveFormat, 320000);
-            using (var encoder = new MediaFoundationEncoder(mediaType))
+            var outputMp3Path = mp3File.FilePath;
+            string arguments = $"-i \"{inputWavPath}\" -vn -ar 44100 -ac 2 -b:a 320k \"{outputMp3Path}\"";
+            lock (_lock)
             {
-                MediaFoundationApi.Startup();
-                MediaFoundationEncoder.EncodeToMp3(fileReader, mp3File.FilePath, 320000);
-                MediaFoundationApi.Shutdown();
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(_hostingEnvironment.WebRootPath, "ffmpeg.exe"),
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using (var process = new Process { StartInfo = startInfo })
+                {
+                    process.Start();
+                    process.WaitForExit();
+                }
             }
 
             return mp3File;
@@ -312,16 +320,21 @@ namespace SoundChangerBlazorServer.Services
         private async Task Change(string fromPath, string toPath, SoundTouchSettings settings)
         {
             using var audioFile = new AudioFileReader(fromPath);
+            audioFile.Volume = (float)settings.Volume;
+
+            var waveFormat = new WaveFormat((int)(audioFile.WaveFormat.SampleRate * settings.Quality), audioFile.WaveFormat.BitsPerSample, audioFile.WaveFormat.Channels);
 
             var soundTouchProvider = new SoundTouchWaveProvider(audioFile)
             {
                 Tempo = settings.Tempo,
                 Pitch = settings.Pitch,
-                Rate = settings.Rate,
+                Rate = settings.Rate
             };
 
             await Task.Run(async () =>
             {
+                using var resampler = new MediaFoundationResampler(soundTouchProvider, waveFormat);
+
                 await using var fileStream = new FileStream(
                     toPath,
                     FileMode.Create,
@@ -329,7 +342,7 @@ namespace SoundChangerBlazorServer.Services
                     FileShare.None,
                     bufferSize: 81920,
                     useAsync: true);
-                WaveFileWriter.WriteWavFileToStream(fileStream, soundTouchProvider);
+                WaveFileWriter.WriteWavFileToStream(fileStream, resampler);
             });
         }
 
@@ -350,7 +363,7 @@ namespace SoundChangerBlazorServer.Services
                 File.Delete(file.FilePath);
                 File.Move(tmpFileName, file.FilePath);
                 file.IsChanged = true;
-            }            
+            }
         }
     }
 }

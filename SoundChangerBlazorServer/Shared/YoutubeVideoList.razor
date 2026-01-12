@@ -1,0 +1,27 @@
+﻿@using SoundChangerBlazorServer.Services.YoutubeServices
+
+@inject NavigationManager NavigationManager;
+
+@code {
+    [Parameter]
+    public IEnumerable<YoutubeTrack> Videos { get; set; }
+
+    private async Task ModifyVideo(string id, string imgUrl)
+    {
+        NavigationManager.NavigateTo($"/{id}/{Uri.EscapeDataString(imgUrl)}");
+    }
+}
+
+@for (var i = 0; i < Videos.Count(); ++i)
+{
+    var video = Videos.ElementAt(i);
+
+    <div class="track-card">
+        <a href="@ExternalUrls.YouTubeVideo(video.Id)" class="text-decoration-none">
+            <img class="imgTrackCard" src="@video.ThumbnailUrl">
+            <div class="track-card-text">@(video.Title + " " + video.ChannelTitle)</div>
+        </a>
+        <button @onclick="() => ModifyVideo(video.Id, video.ThumbnailUrl)" class="btn modifyButton">Modify</button>
+    </div>
+
+}

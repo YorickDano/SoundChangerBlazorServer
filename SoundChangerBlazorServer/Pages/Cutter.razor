@@ -1,6 +1,6 @@
 ﻿@page "/cutter"
 @using SoundChangerBlazorServer.Services.Interfaces
-@using Telerik.Blazor.Components
+
 <h3>Cutter</h3>
 
 @inject CutterService CutterService;
@@ -46,7 +46,6 @@
             AudioValue = e.Detail;
         }
     }
-    private TelerikRangeSlider<double> RangeSlider { get; set; }
     private double Start = 0;
     private double End;
 
@@ -98,20 +97,7 @@
 <audio id="player" controls src="\@_currentFile.AudioPath"></audio>
 <audio id="hPlayer" src="\@_currentFile.AudioPath"></audio>
 0 - @_currentFile.Duration
-<TelerikRangeSlider Class="w-75"
-                    @bind-StartValue="@Start"
-                    @bind-EndValue="@End"
-                    @ref="@RangeSlider"
-                    Min="0"
-                    Max="@_currentFile.Duration.TotalSeconds"
-                    SmallStep="1"
-                    LargeStep="10">
-    <LabelTemplate>
-        <span style="font-weight:bold;">
-            @(((int)(context / 60) + (context % 60) / 100).ToString("F2"))
-        </span>
-    </LabelTemplate>
-</TelerikRangeSlider>
+
 <input class="btn-primary w-25" type="button" id="playBut" value="Play">
 <input class="btn-primary w-25" type="button" id="cutBut" value="Cut">
 
