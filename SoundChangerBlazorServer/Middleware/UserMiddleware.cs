@@ -1,5 +1,4 @@
-﻿
-namespace SoundChangerBlazorServer.Middleware
+﻿namespace SoundChangerBlazorServer.Middleware
 {
     public class UserMiddleware
     {
@@ -25,7 +24,6 @@ namespace SoundChangerBlazorServer.Middleware
                             HttpOnly = true,
                             Expires = DateTime.UtcNow.AddYears(1)
                         });
-
                 }
             }
 

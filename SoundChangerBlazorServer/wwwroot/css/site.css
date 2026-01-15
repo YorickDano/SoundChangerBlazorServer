@@ -604,7 +604,7 @@ body {
     border: 1px solid var(--glass-border);
 }
 
-input, select {
+input[type=text], select {
     width: 100%;
     padding: 12px 15px;
     margin: 8px 0;
@@ -616,7 +616,7 @@ input, select {
     transition: var(--transition);
 }
 
-    input:focus, select:focus {
+    input[type=text]:focus, select:focus {
         outline: none;
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
         transform: scale(1.02);

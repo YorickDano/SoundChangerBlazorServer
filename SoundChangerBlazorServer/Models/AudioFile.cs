@@ -57,6 +57,7 @@ namespace SoundChangerBlazorServer.Models
                 Title = Path.GetFileNameWithoutExtension(e.File.Name),
                 Extension = Path.GetExtension(e.File.Name),
                 Format = e.File.ContentType,
+                Size = e.File.Size
             };
         
         public static AudioFile Init(string fullPath) =>

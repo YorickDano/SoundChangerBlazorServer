@@ -3,7 +3,6 @@ using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.Options;
 using SoundChangerBlazorServer.Models.YoutubeModels;
 using SoundChangerBlazorServer.Services.Interfaces;
-using SoundChangerBlazorServer.Utils;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Options;
 

@@ -93,13 +93,18 @@
         NavigationManager.NavigateTo("", true);
     }
 }
-
+<link href="css/RangeSlider.css" type="text/css" rel="stylesheet"/>
 <audio id="player" controls src="\@_currentFile.AudioPath"></audio>
 <audio id="hPlayer" src="\@_currentFile.AudioPath"></audio>
 0 - @_currentFile.Duration
-
-<input class="btn-primary w-25" type="button" id="playBut" value="Play">
-<input class="btn-primary w-25" type="button" id="cutBut" value="Cut">
+<div class="range_container">
+    <div class="sliders_control">
+        <input id="fromSlider" type="range" value="0" min="0" max="@_currentFile.Duration.TotalSeconds" />
+        <input id="toSlider" type="range" value="@_currentFile.Duration.TotalSeconds" min="0" max="@_currentFile.Duration.TotalSeconds" />
+    </div>
+</div>
+<input class="btn btn-primary w-25" type="button" id="playBut" value="Play">
+<input class="btn btn-primary w-25" type="button" id="cutBut" value="Cut">
 
 @if (Cutters.Any())
 {
@@ -125,8 +130,8 @@
     var cutBut = document.getElementById('cutBut');
     var previous;
     var playback = () => {
-        var startValue = document.getElementsByClassName('k-draghandle k-draghandle-start')[0].getAttribute('aria-valuenow');
-        var endValue = document.getElementsByClassName('k-draghandle k-draghandle-end')[0].getAttribute('aria-valuenow');
+        var startValue = document.getElementById('fromSlider').value;
+        var endValue = document.getElementById('toSlider').value;
             if (hPlayer.currentTime >= endValue) {
                 hPlayer.pause();
                 hPlayer.currentTime = startValue;
@@ -136,12 +141,12 @@
          }
 
         cutBut.addEventListener('click', function () {
-            var startValue = document.getElementsByClassName('k-draghandle k-draghandle-start')[0].getAttribute('aria-valuenow');
-            var endValue = document.getElementsByClassName('k-draghandle k-draghandle-end')[0].getAttribute('aria-valuenow');
+            var startValue = document.getElementById('fromSlider').value;
+            var endValue = document.getElementById('toSlider').value;
             GLOBAL.DotNetReference.invokeMethodAsync('Cut', parseInt(startValue), parseInt(endValue));
         });
         playBut.addEventListener('click', function () {
-            var startValue = document.getElementsByClassName('k-draghandle k-draghandle-start')[0].getAttribute('aria-valuenow');
+            var startValue = document.getElementById('fromSlider').value;
 
             if (hPlayer.currentTime < startValue) {
                 hPlayer.currentTime = startValue;

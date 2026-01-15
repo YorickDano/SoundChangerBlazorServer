@@ -1,10 +1,8 @@
 ﻿using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
-using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using SoundChangerBlazorServer.Services.Interfaces;
-using SpotifyAPI.Web;
 
 namespace SoundChangerBlazorServer.Services.YoutubeServices
 {
@@ -15,8 +13,6 @@ namespace SoundChangerBlazorServer.Services.YoutubeServices
         private readonly ITokenStorageService _tokenStorageService;
         private YouTubeService _youtubeService;
         private readonly UserService _userService;
-
-        public bool IsAuthorized { get; private set; } = false;
 
         public YoutubeMusicService(IConfiguration configuration, IJSRuntime jSRuntime,
                                    ITokenStorageService tokenStorageService, UserService userService)

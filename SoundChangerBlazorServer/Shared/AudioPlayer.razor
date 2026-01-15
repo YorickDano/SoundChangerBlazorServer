@@ -76,10 +76,10 @@
         Tempo: @_pData._audioFile.Tempo
         Pitch: @_pData._audioFile.Pitch
         Rate: @_pData._audioFile.Rate
-        <input class="btn btn-primary w-10" @onclick="MoveToVisualisation" value="Visualisation" />
-        <input class="btn btn-primary w-10" @onclick="GetLyrics" value="Lyrics" />
+        <input class="btn btn-primary w-10" @onclick="MoveToVisualisation" value="Visualisation" readonly />
+        <input class="btn btn-primary w-10" @onclick="GetLyrics" value="Lyrics" readonly />
         <a class="btn btn-primary w-10" href="/cutter">Cutter</a>
-        <input class="btn btn-primary w-10" @onclick="Download" value="Download" />
+        <input class="btn btn-primary w-10" @onclick="Download" value="Download" readonly />
     </div>
 </div>
 

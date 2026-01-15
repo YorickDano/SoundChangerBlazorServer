@@ -1,12 +1,9 @@
-﻿using FFmpeg.AutoGen;
-using Microsoft.AspNetCore.Components.Forms;
-using NAudio.MediaFoundation;
+﻿using Microsoft.AspNetCore.Components.Forms;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using SoundChangerBlazorServer.Models;
 using SoundChangerBlazorServer.Services.Enums;
 using SoundChangerBlazorServer.Services.Interfaces;
-using SoundTouch;
 using SoundTouch.Net.NAudioSupport;
 using System.Diagnostics;
 
@@ -103,7 +100,6 @@ namespace SoundChangerBlazorServer.Services
             _audioFile.Id = _audioFiles.Count + 1;
             _audioFile.WWWRootPath = _hostingEnvironment.WebRootPath;
             _audioFile.FileName += _audioFiles.Count;
-            _audioFile.Size = e.File.Size;
 
             if (_audioFile.Extension == ".mp3")
             {
@@ -168,7 +164,7 @@ namespace SoundChangerBlazorServer.Services
             var newAudioFile = new AudioFile();
             _audioFile.WWWRootPath = _hostingEnvironment.WebRootPath;
             _audioFile.CopyTo(newAudioFile);
-            newAudioFile.FileName = newAudioFile.FileName + $" T-{settings.Tempo}_P-{settings.Pitch}_R-{settings.Rate}_V-{settings.Volume}_Q-{settings.Quality}";
+            newAudioFile.FileName += $" T-{settings.Tempo}_P-{settings.Pitch}_R-{settings.Rate}_V-{settings.Volume}_Q-{settings.Quality}";
 
             await Change(_audioFile.FilePath, newAudioFile.FilePath, settings);
 
@@ -256,8 +252,7 @@ namespace SoundChangerBlazorServer.Services
                 {
                     using (var reader = new WaveFileReader(fs))
                     {
-                        var r = rand.NextSingle() * 2;
-                        r = r > 1.7 ? r - 0.3f : r < 0.3 ? r + 0.3f : r;
+                        var r = 0.7 + (rand.NextDouble() * (1.3 - 0.7));
                         var soundTouchProvider = new SoundTouchWaveProvider(reader)
                         {
                             Tempo = r,

@@ -48,8 +48,6 @@
                 </select>
                 <button @onclick="SearchYoutube" class="btn btn-primary">Search</button>
             </div>
-
-            <br />
             @if (_pData.Videos != null)
             {
                 <button class="btn btn-primary" @onclick="() => _pData.VideosHide = !_pData.VideosHide">@(_pData.VideosHide ? "Show videos" : "Hide videos")</button>
@@ -71,9 +69,12 @@
 
                 }
             }
-            <br />
             @if (_pData._audioFile.Created)
             {
+                <input placeholder="Enter seconds"
+                       @bind-value="@_pData.MixSeconds"
+                       @bind-value:event="oninput" type="number" />
+                <button class="btn btn-primary" @onclick="MixTrack">Mix</button>
                 <div class="bottom-section">
                     <div class="audio-controls">
                         <div>
@@ -131,10 +132,6 @@
                     <button class="btn btn-primary w-100" @onclick="ChangeSound">Change</button>
                 </div>
             }
-            <input placeholder="Enter seconds"
-                   @bind-value="@_pData.MixSeconds"
-                   @bind-value:event="oninput" type="number" />
-            <button class="btn btn-primary" @onclick="MixTrack">Mix</button>
             @if (_pData.Tracks != null)
             {
                 <button class="btn btn-primary" @onclick="() => _pData.TracksHide = !_pData.TracksHide">@(_pData.TracksHide ? "Show tracks" : "Hide tracks")</button>
@@ -168,7 +165,7 @@
                 </div>
             }
         </div>
-        @if (_pData._audioFiles != null)
+        @if (_pData._audioFiles != null && _pData._audioFiles.Any())
         {
             <div class="previousFiles">
                 @if (_pData._audioFiles != null && _pData._audioFiles.Any())
@@ -179,7 +176,7 @@
                 {
                     <br />
                     <div>Previous Files:</div>
-                    @foreach (var file in _pData._audioFiles)
+                    @foreach (var file in _pData._audioFiles!)
                     {
                         var fileId = file.Id;
                         <div id="audioParent">
